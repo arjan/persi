@@ -1,0 +1,5 @@
+.rebar
+*.beam
+*.plt
+
+/ebin/persi.app
