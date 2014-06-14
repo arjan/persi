@@ -8,15 +8,15 @@ Design goals
 
 * Simple, easy to learn API
 * API is purely functional, it is not an ORM.
+* Database schema versioning and migrations
 * Multiple database backends
 * Connection pooling (for applicable backends)
-* No caching - caching should be done in application code
+* No result caching - caching should be done in application code
 * Aiming for 100% test coverage
 
 
 Usage
 -----
-
 
 
 Naming

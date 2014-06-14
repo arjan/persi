@@ -1,6 +1,6 @@
 %% @author Arjan Scherpenisse <arjan@miraclethings.nl>
 %% @copyright 2014 Arjan Scherpenisse
-%% @doc Operations on a single table
+%% @doc Functions relating to schema information
 
 %% Copyright 2014 Arjan Scherpenisse
 %%
@@ -16,32 +16,17 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 
--module(persi_table).
+-module(persi_schema).
 
--include_lib("persi.hrl").
+-export([info/1, table_info/2]).
+-export_type([info/0, table_info/0]).
 
--export(
-   [
-    insert/3,
-    update/4,
-    upsert/4,
-    delete/3,
-    select/3
-   ]).
+-opaque info() :: [table_info()].
+-opaque table_info() :: [table_info()].
 
-
-insert(_, _, _) ->
+info(Connection) ->
     ok.
 
-update(_, _, _, _) ->
-    ok.
-
-upsert(_, _, _, _) ->
-    ok.
-
-delete(_, _, _) ->
-    ok.
-
-select(_, _, _) ->
+table_info(Table, Connection) ->
     ok.
 

@@ -1,6 +1,6 @@
 %% @author Arjan Scherpenisse <arjan@miraclethings.nl>
 %% @copyright 2014 Arjan Scherpenisse
-%% @doc Global supervisor
+%% @doc Supervisor for driver processes
 
 %% Copyright 2014 Arjan Scherpenisse
 %%
@@ -16,7 +16,7 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 
--module(persi_sup).
+-module(persi_driver_sup).
 
 -behaviour(supervisor).
 
@@ -41,6 +41,5 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    Children = [?CHILD(persi_driver_sup, supervisor)],
-    {ok, { {one_for_one, 5, 10}, Children} }.
+    {ok, { {one_for_one, 5, 10}, []} }.
 

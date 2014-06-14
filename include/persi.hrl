@@ -1,1 +1,0 @@
--define(DEFAULT_CONNECTION, default).

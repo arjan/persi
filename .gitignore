@@ -2,4 +2,6 @@
 *.beam
 *.plt
 
-/ebin/persi.app
+.eunit
+ebin/persi.app
+deps/

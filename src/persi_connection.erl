@@ -1,6 +1,6 @@
 %% @author Arjan Scherpenisse <arjan@miraclethings.nl>
 %% @copyright 2014 Arjan Scherpenisse
-%% @doc Operations on a single table
+%% @doc Manages connection definitions
 
 %% Copyright 2014 Arjan Scherpenisse
 %%
@@ -16,32 +16,19 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 
--module(persi_table).
+-module(persi_connection).
 
--include_lib("persi.hrl").
+-export([add/2]).
 
--export(
-   [
-    insert/3,
-    update/4,
-    upsert/4,
-    delete/3,
-    select/3
-   ]).
+add(Connection, Opts) ->
+    case is_pid(whereis_driver(Connection)) of
+        true ->
+            {error, eexist};
+        false ->
+            ok
+    end.
 
-
-insert(_, _, _) ->
-    ok.
-
-update(_, _, _, _) ->
-    ok.
-
-upsert(_, _, _, _) ->
-    ok.
-
-delete(_, _, _) ->
-    ok.
-
-select(_, _, _) ->
-    ok.
+whereis_driver(Connection) ->
+    gproc:whereis_name({n, l, {persi_driver, Connection}}).
+    
 
