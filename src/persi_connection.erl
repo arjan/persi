@@ -18,7 +18,7 @@
 
 -module(persi_connection).
 
--export([add/2]).
+-export([add/2, driver_and_pid/1]).
 
 -spec add(persi:connection(), persi:connection_opts()) -> ok | {error, eexist}.
 add(Connection, Opts) when is_atom(Connection), is_list(Opts) ->
@@ -28,6 +28,14 @@ add(Connection, Opts) when is_atom(Connection), is_list(Opts) ->
         false ->
             {ok, _Pid} = supervisor:start_child(persi_driver_sup, [Connection, Opts]),
             ok
+    end.
+
+driver_and_pid(Connection) ->
+    case whereis_driver(Connection) of
+        undefined ->
+            throw({error, {unknown_persi_driver, Connection}});
+        Pid ->
+            {gproc:get_value({p, l, persi_driver_mod}, Pid), Pid}
     end.
 
 whereis_driver(Connection) ->

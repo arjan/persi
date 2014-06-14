@@ -18,5 +18,21 @@
 
 -module(persi_driver).
 
+-callback schema_info(pid()) ->
+    persi:schema_info().
 
-%% stub for now
+-callback table_info(persi:table(), pid()) ->
+    persi_table:info().
+
+-export([start_driver/2, reg/1]).
+
+-spec start_driver(persi:connection(), persi:connection_opts()) -> {ok, pid()}.
+start_driver(Id, Opts) ->
+    {driver, DriverModule} = proplists:lookup(driver, Opts),
+    gen_server:start_link({via, gproc, {n, l, {persi_driver, Id}}}, DriverModule, Opts, []).
+
+
+%% @doc MUST be called from the driver that is registering itself
+reg(Module) ->
+    io:format(user, "~p~n", [Module]),
+    gproc:reg({p, l, persi_driver_mod}, Module).

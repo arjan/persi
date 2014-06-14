@@ -24,6 +24,7 @@
 
 -export(
    [
+    add_connection/1,
     add_connection/2,
     
     insert/2,
@@ -67,6 +68,9 @@
 
 
 %%% CONNECTION %%%
+-spec add_connection(connection_opts()) -> ok | {error, eexist}.
+add_connection(Opts) ->
+    add_connection(?DEFAULT_CONNECTION, Opts).
 
 -spec add_connection(connection(), connection_opts()) -> ok | {error, eexist}.
 add_connection(Conn, Opts) ->

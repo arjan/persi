@@ -25,8 +25,10 @@
 -opaque table_info() :: [table_info()].
 
 info(Connection) ->
-    ok.
+    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
+    Mod:schema_info(Pid).
 
 table_info(Table, Connection) ->
-    ok.
+    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
+    Mod:table_info(Table,Pid).
 

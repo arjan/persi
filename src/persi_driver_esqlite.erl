@@ -21,10 +21,16 @@
 -behaviour(persi_driver).
 -behaviour(gen_server).
 
+-include_lib("persi/include/persi.hrl").
+   
+-record(state, {db}).
 
 %% gen_server exports
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([start_link/1]).
+
+%% presi_driver exports
+-export([schema_info/1, table_info/2]).
 
 %% interface functions
 -export([
@@ -40,14 +46,36 @@ start_link(Args) when is_list(Args) ->
     gen_server:start_link(?MODULE, Args, []).
 
 
+schema_info(Pid) when is_pid(Pid) ->
+    gen_server:call(Pid, schema_info).
+
+
+table_info(Table, Pid)  when is_atom(Table), is_pid(Pid) ->
+    gen_server:call(Pid, {table_info, Table}).
+
+
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
 
 %% @doc Initiates the server.
-init(_Args) ->
-    io:format(user, "~p INIT: ~p~n", [?MODULE, _Args]),
-    {ok, []}.
+init(Args) ->
+    persi_driver:reg(?MODULE),
+
+    {dbfile, DbFile} = proplists:lookup(dbfile, Args),
+    
+    %% Assert a lock on the db file, no 2 processes can open the same db file at once
+    %%%Fixme? gproc:reg_shared({p,l,{esqlite_dbfile, DbFile}}),
+
+    {ok, Db} = esqlite3:open(DbFile),
+    {ok, #state{db=Db}}.
+
+
+handle_call(schema_info, _From, State) ->
+    {reply, do_schema_info(State#state.db), State};
+
+handle_call({table_info, Table}, _From, State) ->
+    {reply, do_table_info(Table, State#state.db), State};
 
 %% @doc Trap unknown calls
 handle_call(Message, _From, State) ->
@@ -75,6 +103,31 @@ code_change(_OldVsn, State, _Extra) ->
 %%====================================================================
 
 
+do_schema_info(Connection) ->
+    Tables = do_list_tables(Connection),
+    #persi_schema{
+       tables=[do_table_info(Table, Connection) || Table <- Tables]
+      }.
 
+do_list_tables(Connection) ->
+    esqlite3:map(fun({Name}) -> erlang:binary_to_atom(Name, utf8) end, 
+                 <<"SELECT name FROM sqlite_master WHERE type='table' ORDER by name;">>, Connection).
 
+%% @doc Return a descripion of the table.
+do_table_info(TableName, Connection) ->
+    WithPK = esqlite3:map(fun({_Cid, ColumnName, ColumnType, NotNull, Default, PrimaryKey}) -> 
+                                  {#persi_column{name=erlang:binary_to_atom(ColumnName, utf8),
+                                                 type=ColumnType,
+                                                 default=Default,
+                                                 notnull=NotNull =/= 0}, PrimaryKey =/= 0}
+                          end,
+                          [<<"PRAGMA table_info('">>, erlang:atom_to_binary(TableName, utf8), <<"');">>], Connection),
+    {Cols, PKs} = lists:mapfoldl(fun({C=#persi_column{name=Name}, true}, Acc) -> {C, [Name|Acc]};
+                                    (C, Acc) -> {C, Acc} end,
+                                 [],
+                                 WithPK),
+    #persi_table{
+       name=TableName,
+       columns=Cols,
+       pk=PKs}.
 
