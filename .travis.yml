@@ -7,3 +7,9 @@ script: make clean test
 branches:
   only:
     - master
+notifications:
+  email:
+    recipients:
+      - scherpenisse@gmail.com
+    on_success: change #[always|never|change] # default: change
+    on_failure: always #[always|never|change] # default: always
