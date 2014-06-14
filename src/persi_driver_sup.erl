@@ -21,7 +21,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0]).
+-export([start_link/0, start_driver/2]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -36,10 +36,17 @@
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
+-spec start_driver(persi:connection(), persi:connection_opts()) -> {ok, pid()}.
+start_driver(Id, Opts) ->
+    {driver, DriverModule} = proplists:lookup(driver, Opts),
+    gen_server:start_link({via, gproc, {n, l, {persi_driver, Id}}}, DriverModule, Opts, []).
+    
 %% ===================================================================
 %% Supervisor callbacks
 %% ===================================================================
 
 init([]) ->
-    {ok, { {one_for_one, 5, 10}, []} }.
+    {ok, {{simple_one_for_one, 0, 1},
+          [{persi_driver, {persi_driver_sup, start_driver, []},
+            temporary, brutal_kill, worker, []}]}}.
 

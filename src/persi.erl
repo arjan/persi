@@ -63,7 +63,7 @@
 
 -type connection() :: atom().
 -type connection_opts() :: [connection_opt()].
--type connection_opt() :: {dbdriver, module()}.
+-type connection_opt() :: {driver, module()}.
 
 
 %%% CONNECTION %%%

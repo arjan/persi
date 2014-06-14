@@ -1,6 +1,6 @@
 %% @author Arjan Scherpenisse <arjan@miraclethings.nl>
 %% @copyright 2014 Arjan Scherpenisse
-%% @doc Manages connection definitions
+%% @doc Driver behaviour callbacks
 
 %% Copyright 2014 Arjan Scherpenisse
 %%
@@ -16,21 +16,7 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 
--module(persi_connection).
+-module(persi_driver).
 
--export([add/2]).
 
--spec add(persi:connection(), persi:connection_opts()) -> ok | {error, eexist}.
-add(Connection, Opts) when is_atom(Connection), is_list(Opts) ->
-    case is_pid(whereis_driver(Connection)) of
-        true ->
-            {error, eexist};
-        false ->
-            {ok, _Pid} = supervisor:start_child(persi_driver_sup, [Connection, Opts]),
-            ok
-    end.
-
-whereis_driver(Connection) ->
-    gproc:whereis_name({n, l, {persi_driver, Connection}}).
-    
-
+%% stub for now
