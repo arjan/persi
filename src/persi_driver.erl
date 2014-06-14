@@ -27,6 +27,8 @@
 -callback exec(persi:sql(), pid()) ->
     ok | {ok, RowsAffected :: non_neg_integer()}.
 
+-callback flush_metadata(pid()) -> ok.
+
 
 -export([start_driver/2, reg/1]).
 

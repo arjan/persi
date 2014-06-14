@@ -45,6 +45,7 @@ create_table(TableDef, Connection) ->
             {Mod, Pid} = persi_connection:driver_and_pid(Connection),
             SQL = create_table_sql(TableDef),
             Mod:exec(SQL, Pid),
+            Mod:flush_metadata(Pid),
             ok;
         #persi_table{} ->
             {error, eexist}

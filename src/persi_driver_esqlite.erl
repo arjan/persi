@@ -23,14 +23,20 @@
 
 -include_lib("persi/include/persi.hrl").
    
--record(state, {db}).
+-record(state, {db, metadata=undefined}).
 
 %% gen_server exports
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([start_link/1]).
 
 %% presi_driver exports
--export([schema_info/1, table_info/2, exec/2]).
+-export(
+   [
+    schema_info/1,
+    table_info/2,
+    exec/2,
+    flush_metadata/1
+   ]).
 
 %% interface functions
 -export([
@@ -49,12 +55,14 @@ start_link(Args) when is_list(Args) ->
 schema_info(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, schema_info).
 
-
 table_info(Table, Pid)  when is_atom(Table), is_pid(Pid) ->
     gen_server:call(Pid, {table_info, Table}).
 
 exec(Sql, Pid) ->
     gen_server:call(Pid, {exec, Sql}).
+
+flush_metadata(Pid) when is_pid(Pid) ->
+    gen_server:call(Pid, flush_metadata).
 
 
 %%====================================================================
@@ -76,17 +84,26 @@ init(Args) ->
     %% Assert a lock on the db file, no 2 processes can open the same db file at once
     %%%Fixme? gproc:reg_shared({p,l,{esqlite_dbfile, DbFile}}),
 
-    {ok, #state{db=Db}}.
+    {ok, #state{db=Db, metadata=do_schema_info(Db)}}.
 
 
-handle_call(schema_info, _From, State) ->
-    {reply, do_schema_info(State#state.db), State};
+handle_call(schema_info, _From, State=#state{metadata=Metadata}) ->
+    {reply, Metadata, State};
 
-handle_call({table_info, Table}, _From, State) ->
-    {reply, do_table_info(Table, State#state.db), State};
+handle_call({table_info, Table}, _From, State=#state{metadata=Metadata}) ->
+    Reply = case [T || T <- Metadata#persi_schema.tables, T#persi_table.name =:= Table] of
+                [] ->
+                    {error, enotfound};
+                [Info] ->
+                    Info
+            end,
+    {reply, Reply, State};
 
 handle_call({exec, Sql}, _From, State) ->
     {reply, esqlite3:exec(iolist_to_binary(Sql), State#state.db), State};
+
+handle_call(flush_metadata, _From, State) ->
+    {reply, ok, State#state{metadata=do_schema_info(State#state.db)}};
 
 %% @doc Trap unknown calls
 handle_call(Message, _From, State) ->
