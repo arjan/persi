@@ -36,6 +36,8 @@ dup_default_connection_test() ->
 
     ok = persi:add_connection([{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
     {error, eexist} = persi:add_connection([]),
+
+    ok = persi:remove_connection(),
     ok.
 
 dup_named_connection_test() ->
@@ -46,6 +48,8 @@ dup_named_connection_test() ->
     ok = persi:add_connection(sqlite2, [{driver, persi_driver_esqlite}, {dbfile, "/tmp/test1.db"}]),
     
     {error, eexist} = persi:add_connection(sqlite1, []),
+    ok = persi:remove_connection(sqlite1),
+    ok = persi:remove_connection(sqlite2),
     ok.
 
 
@@ -61,4 +65,6 @@ add_remove_connection_test() ->
     ok = persi:remove_connection(asdf),
 
     ok = persi:add_connection(asdf, [{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
+
+    ok = persi:remove_connection(asdf),
     ok.

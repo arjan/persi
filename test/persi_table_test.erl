@@ -57,5 +57,7 @@ full_test() ->
     ok = persi:delete(demotable, 123),
 
     {error, enotfound} = persi:select(demotable, 123),
+
+    persi:remove_connection(),
     
     ok.

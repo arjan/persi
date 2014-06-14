@@ -35,6 +35,7 @@ schema_info_test() ->
     application:start(persi),
     persi:add_connection([{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
     #persi_schema{} = persi:schema_info(),
+    persi:remove_connection(),
     ok.
 
 table_info_test() ->
@@ -42,6 +43,7 @@ table_info_test() ->
     application:start(persi),
     persi:add_connection([{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
     {error, enotfound} = persi:table_info(fjdlkfjdslkfjdslkfjdslkjflkds),
+    persi:remove_connection(),
     ok.
 
 create_table_test() ->
@@ -58,6 +60,7 @@ create_table_test() ->
     
     ok = persi:create_table(Table),
     {error, eexist} = persi:create_table(Table),
+    persi:remove_connection(),
     ok.
 
 schema_migration_test() ->
@@ -96,5 +99,7 @@ schema_migration_test() ->
     meck:expect(migrations_example, schema_version, fun() -> 4 end),
     {upgrade, 4} = persi:manage_schema(migrations_example),
     noop = persi:manage_schema(migrations_example),
+
+    persi:remove_connection(),
     
     ok.
