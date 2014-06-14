@@ -74,12 +74,12 @@ schema_migration_test() ->
               persi:create_table(#persi_table{name=test, columns=[#persi_column{name=id, type=int, notnull=true}], pk=[id]}, Connection);
          ({upgrade, 2}, Connection) ->
               ok = persi:add_column(test, #persi_column{name=name, type="varchar(60)"}, Connection),
-              T = persi:table_info(test, Connection),
+              {ok, T} = persi:table_info(test, Connection),
               [id, name] = [C#persi_column.name || C <- T#persi_table.columns],
               ok;
          ({upgrade, 3}, Connection) ->
               ok = persi:add_column(test, #persi_column{name=lastname, type="varchar(120)"}, Connection),
-              T = persi:table_info(test, Connection),
+              {ok, T} = persi:table_info(test, Connection),
               [id, name, lastname] = [C#persi_column.name || C <- T#persi_table.columns],
               ok;
          ({upgrade, 4}, Connection) ->

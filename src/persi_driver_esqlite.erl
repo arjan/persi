@@ -101,7 +101,7 @@ handle_call({table_info, Table}, _From, State=#state{metadata=Metadata}) ->
                 [] ->
                     {error, enotfound};
                 [Info] ->
-                    Info
+                    {ok, Info}
             end,
     {reply, Reply, State};
 
