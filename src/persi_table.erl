@@ -55,11 +55,36 @@ insert(TableName, Row, Connection) when is_atom(TableName) ->
     end.
 
 
-update(_, _, _, _) ->
-    ok.
+-spec update(persi:table(), persi:selection(), persi:row(), persi:connection()) -> ok | persi:error().
+update(TableName, Selection, Row, Connection) when is_atom(TableName) ->
+    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
 
-upsert(_, _, _, _) ->
-    ok.
+    {Ks,Vs} = lists:unzip(Row),
+    Sets = persi_util:iolist_join(
+             [[atom_to_list(K), " = ?"] || K <- Ks], $,),
+    
+    {Where, WhereArgs} = selection_where(Selection),
+    Sql = [<<"UPDATE ">>, atom_to_list(TableName), " SET ", Sets, " WHERE ", Where],
+    case Mod:fetchall(Sql, Vs ++ WhereArgs, Pid) of
+        {ok, {_, _, 0}} ->
+            {error, enotfound};
+        {ok, {_, _, Nr}} ->
+            {ok, Nr};
+        {error, _} = E ->
+            E
+    end.
+
+-spec upsert(persi:table(), persi:selection(), persi:row(), persi:connection()) -> ok | persi:error().
+upsert(TableName, Selection, Row, Connection) when is_atom(TableName) ->
+    case update(TableName, Selection, Row, Connection) of
+        {ok, _} = R ->
+            R;
+        {error, enotfound} ->
+            ok = insert(TableName, rowterm(Selection) ++ Row, Connection),
+            {ok, insert};
+        {error, _} = E ->
+            E
+    end.
 
 -spec delete(persi:table(), persi:selection(), persi:connection()) -> ok | persi:error().
 delete(TableName, Selection, Connection) when is_atom(TableName) ->
@@ -94,12 +119,15 @@ select(TableName, Selection, Connection) when is_atom(TableName) ->
     end.
 
 
--spec selection_where(persi:selection()) -> {WhereClause::binary(), persi:sql_args()}.
-selection_where(Simple) when is_binary(Simple);
-                             is_integer(Simple);
-                             is_atom(Simple)->
-    selection_where([{id, Simple}]);
+rowterm(Simple) when not(is_list(Simple)) ->
+    [{id, Simple}];
+rowterm(R) ->
+    R.
 
+
+-spec selection_where(persi:selection()) -> {WhereClause::binary(), persi:sql_args()}.
+selection_where(Simple) when not(is_list(Simple)) ->
+    selection_where(rowterm(Simple));
 selection_where([]) ->
     throw({error, empty_selection});
 selection_where(KVs) when is_list(KVs) ->

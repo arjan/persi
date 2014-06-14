@@ -55,9 +55,33 @@ full_test() ->
     123 = proplists:get_value(id, Row),
     <<"Foo">> = proplists:get_value(name, Row),
 
+    {ok, 1} = persi:update(demotable, 123, [{name, <<"Bar">>}]),
+    {ok, Row1} = persi:select(demotable, 123),
+    123 = proplists:get_value(id, Row1),
+    <<"Bar">> = proplists:get_value(name, Row1),
+    
     {ok, 1} = persi:delete(demotable, 123),
-
     {error, enotfound} = persi:select(demotable, 123),
+
+    persi:remove_connection(),
+    
+    ok.
+
+
+
+upsert_test() ->
+    setup(),
+    
+    {ok, insert} = persi:upsert(demotable, 111, [{name, <<"Foo">>}]),
+
+    {ok, _} = persi:select(demotable, 111),
+
+    {ok, 1} = persi:upsert(demotable, 111, [{name, <<"Bar">>}]),
+    {ok, Row1} = persi:select(demotable, 111),
+    111 = proplists:get_value(id, Row1),
+    <<"Bar">> = proplists:get_value(name, Row1),
+    
+    {ok, 1} = persi:delete(demotable, 111),
 
     persi:remove_connection(),
     
@@ -70,7 +94,9 @@ unknown_column_test() ->
     {error, enotfound} = persi:select(demotable, 123),
 
     {error, {sqlite_error, _}} = persi:insert(demotable, [{id, 123}, {name, <<"Foo">>}, {meh, moeder}]),
-
+    {error, {sqlite_error, _}} = persi:update(demotable, 123, [{name, <<"Foo">>}, {meh, moeder}]),
+    {error, {sqlite_error, _}} = persi:upsert(demotable, 123, [{name, <<"Foo">>}, {meh, moeder}]),
+    
     persi:remove_connection(),
     
     ok.

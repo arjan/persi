@@ -13,10 +13,10 @@ Design goals
 * Database schema versioning and migrations
 * Multiple database backends
 * Connection pooling (for applicable backends)
-* Optionnaly allows for arbitrary data in tables (serialized as binary proplist)
 * No result caching - caching should be done in application code
 * Metadata caching (table / schema info) in driver layer
-* Aiming for 100% test coverage 
+* Aiming for 100% test coverage
+* Optionally allow for arbitrary data in tables (serialized in a blob column) 
 
 
 Naming

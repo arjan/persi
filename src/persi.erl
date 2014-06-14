@@ -132,29 +132,29 @@ remove_connection(Conn) ->
 
 %%% TABLE %%%
 
--spec insert(table(), row()) -> {ok, id()}.
+-spec insert(table(), row()) -> {ok, non_neg_integer()}.
 insert(Table, Data) ->
     insert(Table, Data, ?DEFAULT_CONNECTION).
 
--spec insert(table(), row(), connection()) -> {ok, id()}.
+-spec insert(table(), row(), connection()) -> {ok, non_neg_integer()}.
 insert(Table, Data, Conn) ->
     persi_table:insert(Table, Data, Conn).
 
 
--spec update(table(), id(), row()) -> {ok, id()}.
+-spec update(table(), id(), row()) -> {ok, non_neg_integer()}.
 update(Table, Id, Data) ->
     update(Table, Id, Data, ?DEFAULT_CONNECTION).
 
--spec update(table(), id(), row(), connection()) -> {ok, id()}.
+-spec update(table(), id(), row(), connection()) -> {ok, non_neg_integer()}.
 update(Table, Id, Data, Conn) ->
     persi_table:update(Table, Id, Data, Conn).
 
 
--spec upsert(table(), id(), row()) -> {ok, id()}.
+-spec upsert(table(), id(), row()) -> {ok, non_neg_integer()}.
 upsert(Table, Id, Data) ->
     upsert(Table, Id, Data, ?DEFAULT_CONNECTION).
 
--spec upsert(table(), id(), row(), connection()) -> {ok, id()}.
+-spec upsert(table(), id(), row(), connection()) -> {non_neg_integer, id()}.
 upsert(Table, Id, Data, Conn) ->
     persi_table:upsert(Table, Id, Data, Conn).
 
