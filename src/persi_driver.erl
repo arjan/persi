@@ -33,11 +33,8 @@
 %% @doc Flush any cached metadata in the driver process (called after a schema change)
 -callback flush_metadata(pid()) -> ok.
 
-%% @doc Simple query, returns all rows without column information
--callback q(persi:sql(), persi:sql_args(), pid()) -> persi:sql_result().
-
 %% @doc Full query, returns all rows plus column information
--callback fetchall(persi:sql(), persi:sql_args(), pid()) -> persi:sql_result().
+-callback fetchall(persi:sql(), persi:sql_args(), pid()) -> {persi:sql_result(), persi:column_names(), non_neg_integer()}.
 
 
 -export([start_driver/2, reg/1]).

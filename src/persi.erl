@@ -59,8 +59,6 @@
     manage_schema/2,
 
     %% persi_query wrappers, provide raw database access
-    q/2,
-    q/3,
     fetchall/2,
     fetchall/3
    ]).
@@ -83,7 +81,8 @@
     sql/0,
     sql_args/0,
     sql_result/0,
-    manage_result/0
+    manage_result/0,
+    column_names/0
    ]).
 
 -type error() :: {error, atom()}.
@@ -111,7 +110,7 @@
 -type sql_arg() :: [string() | integer() | atom()].
 -type sql_result() :: term().
 
--type raw_column_names() :: [binary()].
+-type column_names() :: tuple().
 
 %%% CONNECTION %%%
 -spec add_connection(connection_opts()) -> ok | {error, eexist}.
@@ -240,19 +239,11 @@ manage_schema(Module, Conn) ->
     persi_schema:manage(Module, Conn).
 
 
--spec q(sql(), sql_args()) -> sql_result().
-q(Sql, Args) ->
-    q(Sql, Args, ?DEFAULT_CONNECTION).
-
--spec q(sql(), sql_args(), connection()) -> sql_result().
-q(Sql, Args, Conn) ->
-    persi_query:q(Sql, Args, Conn).
-
--spec fetchall(sql(), sql_args()) -> sql_result().
+-spec fetchall(sql(), sql_args()) -> {ok, {sql_result(), column_names(), non_neg_integer()}} | error().
 fetchall(Sql, Args) ->
     fetchall(Sql, Args, ?DEFAULT_CONNECTION).
 
--spec fetchall(sql(), sql_args(), connection()) -> {sql_result(), raw_column_names()}.
+-spec fetchall(sql(), sql_args(), connection()) -> {ok, {sql_result(), column_names(), non_neg_integer()}} | error().
 fetchall(Sql, Args, Conn) ->
     persi_query:fetchall(Sql, Args, Conn).
 

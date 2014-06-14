@@ -34,7 +34,7 @@
 insert(TableName, Row, Connection) when is_atom(TableName) ->
     {Mod, Pid} = persi_connection:driver_and_pid(Connection),
 
-    {Cols, Args} = lists:foldl(
+    {Cols, Args} = lists:foldr(
                      fun({K, V}, {C0, A0}) ->
                              {[atom_to_list(K)|C0], [V|A0]}
                      end,
@@ -47,9 +47,13 @@ insert(TableName, Row, Connection) when is_atom(TableName) ->
            ") VALUES (",
            persi_util:iolist_join([$? || _ <- lists:seq(1, length(Cols))], $,),
            ")"],
-    R= Mod:q(Sql, Args, Pid),
-    io:format(user, "~p~n", [R]),
-    ok.
+    case Mod:fetchall(Sql, Args, Pid) of
+        {ok, _} ->
+            ok;
+        {error, _} = E ->
+            E
+    end.
+
 
 update(_, _, _, _) ->
     ok.
@@ -63,11 +67,13 @@ delete(TableName, Selection, Connection) when is_atom(TableName) ->
 
     {Where, Args} = selection_where(Selection),
     Sql = [<<"DELETE FROM ">>, atom_to_list(TableName), " WHERE ", Where],
-
-    case Mod:q(Sql, Args, Pid) of
-        R ->
-            io:format(user, "~p~n", [R]),
-            ok
+    case Mod:fetchall(Sql, Args, Pid) of
+        {ok, {_, _, 0}} ->
+            {error, enotfound};
+        {ok, {_, _, Nr}} ->
+            {ok, Nr};
+        {error, _} = E ->
+            E
     end.
 
 -spec select(persi:table(), persi:selection(), persi:connection()) -> {ok, persi:row()} | persi:error().
@@ -78,11 +84,13 @@ select(TableName, Selection, Connection) when is_atom(TableName) ->
     Sql = [<<"SELECT * FROM ">>, atom_to_list(TableName), " WHERE ", Where, " LIMIT 1"],
 
     case Mod:fetchall(Sql, Args, Pid) of
-        {[], _} ->
+        {ok, {[], _, _}} ->
             {error, enotfound};
-        {[Values], Columns} ->
+        {ok, {[Values], Columns, _}} ->
             Row = lists:zip(tuple_to_list(Columns), tuple_to_list(Values)),
-            {ok, Row}
+            {ok, Row};
+        {error, _} = E ->
+            E
     end.
 
 
@@ -95,7 +103,7 @@ selection_where(Simple) when is_binary(Simple);
 selection_where([]) ->
     throw({error, empty_selection});
 selection_where(KVs) when is_list(KVs) ->
-    {Clauses, Args} = lists:foldl(
+    {Clauses, Args} = lists:foldr(
                         fun({K, V}, {C0, A0}) ->
                                 {[ [atom_to_list(K), " = ?"] | C0], [V | A0]}
                         end,

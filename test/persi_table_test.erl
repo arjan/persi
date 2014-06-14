@@ -31,12 +31,6 @@ setup() ->
 
     ok = persi:add_connection([{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
 
-    ok.
-
-
-full_test() ->
-    setup(),
-
     Table = #persi_table{name=demotable,
                          columns=
                              [
@@ -46,7 +40,14 @@ full_test() ->
                         pk=[id]},
     persi:create_table(Table),
     
+    ok.
+
+
+full_test() ->
+    setup(),
+    
     {error, enotfound} = persi:select(demotable, 123),
+    {error, enotfound} = persi:delete(demotable, 123),
 
     ok = persi:insert(demotable, [{id, 123}, {name, <<"Foo">>}]),
 
@@ -54,9 +55,21 @@ full_test() ->
     123 = proplists:get_value(id, Row),
     <<"Foo">> = proplists:get_value(name, Row),
 
-    ok = persi:delete(demotable, 123),
+    {ok, 1} = persi:delete(demotable, 123),
 
     {error, enotfound} = persi:select(demotable, 123),
+
+    persi:remove_connection(),
+    
+    ok.
+
+
+unknown_column_test() ->
+    setup(),
+    
+    {error, enotfound} = persi:select(demotable, 123),
+
+    {error, {sqlite_error, _}} = persi:insert(demotable, [{id, 123}, {name, <<"Foo">>}, {meh, moeder}]),
 
     persi:remove_connection(),
     

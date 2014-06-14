@@ -36,7 +36,6 @@
     table_info/2,
     exec/2,
     flush_metadata/1,
-    q/3,
     fetchall/3
    ]).
 
@@ -66,10 +65,6 @@ exec(Sql, Pid) ->
 
 flush_metadata(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, flush_metadata).
-
-q(Sql, Args, Pid) when is_pid(Pid) ->
-    %io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
-    gen_server:call(Pid, {q, iolist_to_binary(Sql), Args}).
 
 fetchall(Sql, Args, Pid) when is_pid(Pid) ->
     %io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
@@ -113,13 +108,15 @@ handle_call({table_info, Table}, _From, State=#state{metadata=Metadata}) ->
 handle_call({exec, Sql}, _From, State) ->
     {reply, esqlite3:exec(iolist_to_binary(Sql), State#state.db), State};
 
-handle_call({q, Sql, Args}, _From, State) ->
-    {reply, esqlite3:q(iolist_to_binary(Sql), Args, State#state.db), State};
-
 handle_call({fetchall, Sql, Args}, _From, State) ->
-    {ok, Stmt} = esqlite3:prepare(iolist_to_binary(Sql), State#state.db),
-    ok = esqlite3:bind(Stmt, Args),
-    Result = {esqlite3:fetchall(Stmt), esqlite3:column_names(Stmt)},
+    Result = case esqlite3:prepare(iolist_to_binary(Sql), State#state.db) of
+                 {ok, Stmt} ->
+                     ok = esqlite3:bind(Stmt, Args),
+                     {ok, NumRows} = esqlite3:changes(State#state.db),
+                     {ok, {esqlite3:fetchall(Stmt), esqlite3:column_names(Stmt), NumRows}};
+                 {error, _} = E ->
+                     E
+             end,
     {reply, Result, State};
 
 handle_call(flush_metadata, _From, State) ->
