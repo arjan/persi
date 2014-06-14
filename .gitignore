@@ -5,3 +5,4 @@
 .eunit
 ebin/persi.app
 deps/
+/rebar

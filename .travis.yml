@@ -1,0 +1,9 @@
+language: erlang
+otp_release:
+  - R15B01
+  - R16B03
+  - 17.0
+script: make clean test
+branches:
+  only:
+    - master
