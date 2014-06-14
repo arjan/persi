@@ -56,9 +56,8 @@ create_table(TableDef, Connection) ->
         {error, enotfound} ->
             {Mod, Pid} = persi_connection:driver_and_pid(Connection),
             SQL = create_table_sql(TableDef),
-            Mod:exec(SQL, Pid),
-            Mod:flush_metadata(Pid),
-            ok;
+            ok = Mod:exec(SQL, Pid),
+            ok = Mod:flush_metadata(Pid);
         #persi_table{} ->
             {error, eexist}
     end.
@@ -68,20 +67,20 @@ drop_table(TableName, Connection) ->
     case table_info(TableName, Connection) of
         #persi_table{} ->
             {Mod, Pid} = persi_connection:driver_and_pid(Connection),
-            Mod:exec([<<"DROP TABLE ">>, atom_to_list(TableName)], Pid),
-            Mod:flush_metadata(Pid);
+            ok = Mod:exec([<<"DROP TABLE ">>, atom_to_list(TableName)], Pid),
+            ok = Mod:flush_metadata(Pid);
         {error, enotfound} ->
             {error, enotfound}
     end.
 
--spec add_column(persi:table(), persi:column(), persi:connection()) -> ok | {error, enotfound}.
+-spec add_column(persi:table(), persi:column_info(), persi:connection()) -> ok | {error, enotfound}.
 add_column(TableName, ColumnDef, Connection) ->
     case table_info(TableName, Connection) of
         #persi_table{} ->
             {Mod, Pid} = persi_connection:driver_and_pid(Connection),
-            Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" ADD COLUMN ">>,
-                     create_column_sql(ColumnDef)], Pid),
-            Mod:flush_metadata(Pid);
+            ok = Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" ADD COLUMN ">>,
+                           create_column_sql(ColumnDef)], Pid),
+            ok = Mod:flush_metadata(Pid);
         {error, enotfound} ->
             {error, enotfound}
     end.
@@ -91,9 +90,9 @@ drop_column(TableName, ColumnName, Connection) ->
     case table_info(TableName, Connection) of
         #persi_table{} ->
             {Mod, Pid} = persi_connection:driver_and_pid(Connection),
-            Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" DROP COLUMN ">>,
-                      atom_to_list(ColumnName)], Pid),
-            Mod:flush_metadata(Pid);
+            ok = Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" DROP COLUMN ">>,
+                           atom_to_list(ColumnName)], Pid),
+            ok = Mod:flush_metadata(Pid);
         {error, enotfound} ->
             {error, enotfound}
     end.
@@ -102,12 +101,13 @@ drop_column(TableName, ColumnName, Connection) ->
 manage(SchemaModule, Connection) ->
     case table_info(schema_version, Connection) of
         {error, enotfound} ->
-            create_table(#persi_table{name=schema_version,
-                                      columns=[
-                                               #persi_column{name=schema, type="varchar(255)", notnull=true},
-                                               #persi_column{name=version, type=int, notnull=true, default=1}
-                                              ],
-                                      pk=[schema]}, Connection);
+            ok = create_table(
+                   #persi_table{name=schema_version,
+                                columns=[
+                                         #persi_column{name=schema, type="varchar(255)", notnull=true},
+                                         #persi_column{name=version, type=int, notnull=true, default=1}
+                                        ],
+                                pk=[schema]}, Connection);
         _ ->
             nop
     end,
@@ -131,25 +131,15 @@ manage(SchemaModule, Connection) ->
     end.
 
 
-
-with_commas([]) -> [];
-with_commas([X]) -> [X];
-with_commas([First|Rest]) ->
-    lists:reverse(with_commas(Rest, [First])).
-with_commas([], Acc) ->
-    Acc;
-with_commas([H|T], Acc) ->
-    with_commas(T, [H,$,|Acc]).
-
-
 create_table_sql(#persi_table{name=Name, columns=Columns, pk=PK, fks=FKs}) ->
     ["CREATE TABLE ", atom_to_list(Name), " (",
-       with_commas(
-         [create_column_sql(C) || C <- Columns]
-         ++ primary_key_sql(PK)
-         ++ [foreign_key_sql(FK) || FK <- FKs]
-        ),
-       ")"].
+     persi_util:iolist_join(
+       [create_column_sql(C) || C <- Columns]
+       ++ primary_key_sql(PK)
+       ++ [foreign_key_sql(FK) || FK <- FKs],
+       $,
+      ),
+     ")"].
 
 create_column_sql(#persi_column{name=Name, type=Type, default=Default, notnull=Notnull}) ->
     [atom_to_list(Name),
@@ -179,7 +169,7 @@ map_sql_notnull(false) ->
 primary_key_sql([]) ->
     [];
 primary_key_sql(Cols) ->
-    [["PRIMARY KEY (", with_commas(lists:map(fun atom_to_list/1, Cols)), ")"]].
+    [["PRIMARY KEY (", persi_util:iolist_join(lists:map(fun atom_to_list/1, Cols), $,), ")"]].
 
 foreign_key_sql(#persi_fk{table=Table, from=From, to=To}) ->
     ["FOREIGN KEY ", atom_to_list(From) ," REFERENCES ", atom_to_list(Table), "(", atom_to_list(To), ")"].

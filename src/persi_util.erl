@@ -1,6 +1,6 @@
 %% @author Arjan Scherpenisse <arjan@miraclethings.nl>
 %% @copyright 2014 Arjan Scherpenisse
-%% @doc Query functions
+%% @doc Utilities
 
 %% Copyright 2014 Arjan Scherpenisse
 %%
@@ -16,18 +16,18 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 
--module(persi_query).
+-module(persi_util).
 
--include_lib("persi/include/persi.hrl").
-
--export([q/3, fetchall/3]).
-
-q(Sql, Args, Connection) ->
-    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
-    Mod:q(Sql, Args, Pid).
+-export([iolist_join/2]).
 
 
-fetchall(Sql, Args, Connection) ->
-    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
-    Mod:fetchall(Sql, Args, Pid).
-
+%% @doc Given a list of strings, create an iolist with the given separator.
+-spec iolist_join([iolist()], term()) -> iolist().
+iolist_join([], _) -> [];
+iolist_join([X], _) -> [X];
+iolist_join([First|Rest], Sep) ->
+    lists:reverse(iolist_join(Rest, Sep, [First])).
+iolist_join([], _Sep, Acc) ->
+    Acc;
+iolist_join([H|T], Sep, Acc) ->
+    iolist_join(T, Sep, [H,Sep|Acc]).

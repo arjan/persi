@@ -27,6 +27,8 @@
     %% persi_connection wrappers
     add_connection/1,
     add_connection/2,
+    remove_connection/0,
+    remove_connection/1,
 
     %% persi_table wrappers
     insert/2,
@@ -55,37 +57,61 @@
     drop_column/3,
     manage_schema/1,
     manage_schema/2,
-    
-    %% persi_query wrappers
+
+    %% persi_query wrappers, provide raw database access
     q/2,
-    q/3
+    q/3,
+    fetchall/2,
+    fetchall/3
    ]).
 
 %% Types start here
--export_type([id/0, table/0, row/0, col_name/0, col_value/0, connection/0, error/0, sql/0, sql_args/0, sql_result/0, manage_result/0]).
+-export_type(
+   [
+    id/0,
+    table/0,
+    schema_info/0,
+    table_info/0,
+    column_info/0,
+    selection/0,
+    row/0,
+    col_name/0,
+    col_value/0,
+    connection/0,
+    connection_opts/0,
+    error/0,
+    sql/0,
+    sql_args/0,
+    sql_result/0,
+    manage_result/0
+   ]).
 
 -type error() :: {error, atom()}.
 
--type id() :: non_neg_integer().
--type table() :: atom().
--type row() :: [{col_name(), col_value()}].
+-type id() :: non_neg_integer() | binary().
 
+-type selection() :: binary() | integer() | atom() | [{col_name(), col_value()}].
+
+-type row() :: [{col_name(), col_value()}].
 -type col_name() :: atom().
 -type col_value() :: term().
 
+-type table() :: atom().
 -type connection() :: atom().
 -type connection_opts() :: [connection_opt()].
--type connection_opt() :: {driver, module()}.
+-type connection_opt() :: {driver, module()} | {atom(), term()}.
 
 -type schema_info() :: #persi_schema{}.
 -type table_info() :: #persi_table{}.
+-type column_info() :: #persi_column{}.
 -type manage_result() :: install | noop | {upgrade, non_neg_integer()}.
 
--type sql() :: iolist().
+-type sql() :: binary() | iolist().
 -type sql_args() :: [sql_arg()].
 -type sql_arg() :: [string() | integer() | atom()].
 -type sql_result() :: term().
 
+-type raw_column_names() :: [binary()].
 
 %%% CONNECTION %%%
 -spec add_connection(connection_opts()) -> ok | {error, eexist}.
@@ -95,6 +121,14 @@ add_connection(Opts) ->
 -spec add_connection(connection(), connection_opts()) -> ok | {error, eexist}.
 add_connection(Conn, Opts) ->
     persi_connection:add(Conn, Opts).
+
+-spec remove_connection() -> ok | {error, enotfound}.
+remove_connection() ->
+    remove_connection(?DEFAULT_CONNECTION).
+
+-spec remove_connection(connection()) -> ok | {error, enotfound}.
+remove_connection(Conn) ->
+    persi_connection:remove(Conn).
 
 
 %%% TABLE %%%
@@ -166,7 +200,7 @@ table_info(Table, Conn) ->
 
 -spec create_table(table_info()) -> ok | {error, eexist}.
 create_table(Table) ->
-create_table(Table, ?DEFAULT_CONNECTION).
+    create_table(Table, ?DEFAULT_CONNECTION).
 
 -spec create_table(table_info(), connection()) -> ok | {error, eexist}.
 create_table(Table, Conn) ->
@@ -180,7 +214,7 @@ drop_table(Table) ->
 drop_table(Table, Conn) ->
     persi_schema:drop_table(Table, Conn).
 
--spec add_column(table(), #persi_column{}) -> ok | {error, enotfound}.
+-spec add_column(table(), column_info()) -> ok | {error, enotfound}.
 add_column(Table, Column) ->
     add_column(Table, Column, ?DEFAULT_CONNECTION).
 
@@ -213,4 +247,12 @@ q(Sql, Args) ->
 -spec q(sql(), sql_args(), connection()) -> sql_result().
 q(Sql, Args, Conn) ->
     persi_query:q(Sql, Args, Conn).
+
+-spec fetchall(sql(), sql_args()) -> sql_result().
+fetchall(Sql, Args) ->
+    fetchall(Sql, Args, ?DEFAULT_CONNECTION).
+
+-spec fetchall(sql(), sql_args(), connection()) -> {sql_result(), raw_column_names()}.
+fetchall(Sql, Args, Conn) ->
+    persi_query:fetchall(Sql, Args, Conn).
 

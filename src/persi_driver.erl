@@ -18,18 +18,26 @@
 
 -module(persi_driver).
 
+%% @doc Return metadata information about the entire database
 -callback schema_info(pid()) ->
     persi:schema_info().
 
+%% @doc Return metadata information about the table
 -callback table_info(persi:table(), pid()) ->
-    persi_table:info().
+    persi:table_info().
 
+%% @doc Execute a plain SQL query
 -callback exec(persi:sql(), pid()) ->
     ok | {ok, RowsAffected :: non_neg_integer()}.
 
+%% @doc Flush any cached metadata in the driver process (called after a schema change)
 -callback flush_metadata(pid()) -> ok.
 
+%% @doc Simple query, returns all rows without column information
 -callback q(persi:sql(), persi:sql_args(), pid()) -> persi:sql_result().
+
+%% @doc Full query, returns all rows plus column information
+-callback fetchall(persi:sql(), persi:sql_args(), pid()) -> persi:sql_result().
 
 
 -export([start_driver/2, reg/1]).

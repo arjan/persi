@@ -30,7 +30,25 @@
    ]).
 
 
-insert(_, _, _) ->
+-spec insert(persi:table(), persi:row(), persi:connection()) -> {ok, persi:id()} | persi:error().
+insert(TableName, Row, Connection) when is_atom(TableName) ->
+    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
+
+    {Cols, Args} = lists:foldl(
+                     fun({K, V}, {C0, A0}) ->
+                             {[atom_to_list(K)|C0], [V|A0]}
+                     end,
+                     {[], []},
+                     Row),
+    
+    Sql = [<<"INSERT INTO ">>, atom_to_list(TableName),
+           " (",
+           persi_util:iolist_join(Cols, $,),
+           ") VALUES (",
+           persi_util:iolist_join([$? || _ <- lists:seq(1, length(Cols))], $,),
+           ")"],
+    R= Mod:q(Sql, Args, Pid),
+    io:format(user, "~p~n", [R]),
     ok.
 
 update(_, _, _, _) ->
@@ -39,9 +57,50 @@ update(_, _, _, _) ->
 upsert(_, _, _, _) ->
     ok.
 
-delete(_, _, _) ->
-    ok.
+-spec delete(persi:table(), persi:selection(), persi:connection()) -> ok | persi:error().
+delete(TableName, Selection, Connection) when is_atom(TableName) ->
+    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
 
-select(_, _, _) ->
-    ok.
+    {Where, Args} = selection_where(Selection),
+    Sql = [<<"DELETE FROM ">>, atom_to_list(TableName), " WHERE ", Where],
 
+    case Mod:q(Sql, Args, Pid) of
+        R ->
+            io:format(user, "~p~n", [R]),
+            ok
+    end.
+
+-spec select(persi:table(), persi:selection(), persi:connection()) -> {ok, persi:row()} | persi:error().
+select(TableName, Selection, Connection) when is_atom(TableName) ->
+    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
+
+    {Where, Args} = selection_where(Selection),
+    Sql = [<<"SELECT * FROM ">>, atom_to_list(TableName), " WHERE ", Where, " LIMIT 1"],
+
+    case Mod:fetchall(Sql, Args, Pid) of
+        {[], _} ->
+            {error, enotfound};
+        {[Values], Columns} ->
+            Row = lists:zip(tuple_to_list(Columns), tuple_to_list(Values)),
+            {ok, Row}
+    end.
+
+
+-spec selection_where(persi:selection()) -> {WhereClause::binary(), persi:sql_args()}.
+selection_where(Simple) when is_binary(Simple);
+                             is_integer(Simple);
+                             is_atom(Simple)->
+    selection_where([{id, Simple}]);
+
+selection_where([]) ->
+    throw({error, empty_selection});
+selection_where(KVs) when is_list(KVs) ->
+    {Clauses, Args} = lists:foldl(
+                        fun({K, V}, {C0, A0}) ->
+                                {[ [atom_to_list(K), " = ?"] | C0], [V | A0]}
+                        end,
+                        {[], []},
+                        KVs),
+    {persi_util:iolist_join(Clauses, " AND "), Args}.
+
+                                   
