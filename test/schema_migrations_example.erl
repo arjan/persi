@@ -34,6 +34,7 @@ schema_version() -> 1.
 manage(install, Connection) ->
     persi:create_table(#persi_table{name=test, columns=[#persi_column{name=id, type=int, notnull=true}], pk=[id]}, Connection).
 
+
      
 
 
