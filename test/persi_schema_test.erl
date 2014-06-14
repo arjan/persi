@@ -73,6 +73,8 @@ schema_migration_test() ->
       fun(install, Connection) ->
               persi:create_table(#persi_table{name=test, columns=[#persi_column{name=id, type=int, notnull=true}], pk=[id]}, Connection);
          ({upgrade, 2}, Connection) ->
+              {error, enotfound} = persi:add_column(jfdslkfjlkdsfjlkdsjf, #persi_column{name=name, type="varchar(60)"}, Connection),
+
               ok = persi:add_column(test, #persi_column{name=name, type="varchar(60)"}, Connection),
               {ok, T} = persi:table_info(test, Connection),
               [id, name] = [C#persi_column.name || C <- T#persi_table.columns],
@@ -87,6 +89,7 @@ schema_migration_test() ->
               %%ok = persi:drop_column(test, name, Connection),
 
               ok = persi:drop_table(test, Connection),
+              {error, enotfound} = persi:drop_table(test, Connection),
               {error, enotfound} = persi:table_info(test, Connection),
               ok
       end

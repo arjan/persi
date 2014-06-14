@@ -86,7 +86,8 @@ init(Args) ->
     
     %% Enable foreign key checks
     ok = esqlite3:exec(<<"PRAGMA foreign_keys=1;">>, Db),
-    
+    ok = esqlite3:exec(<<"PRAGMA count_changes=1;">>, Db),
+
     %% Assert a lock on the db file, no 2 processes can open the same db file at once
     %%%Fixme? gproc:reg_shared({p,l,{esqlite_dbfile, DbFile}}),
 

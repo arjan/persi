@@ -48,7 +48,7 @@ insert(TableName, Row, Connection) when is_atom(TableName) ->
            persi_util:iolist_join([$? || _ <- lists:seq(1, length(Cols))], $,),
            ")"],
     case Mod:fetchall(Sql, Args, Pid) of
-        {ok, _} ->
+        {ok, {[{1}], _, _}} ->
             ok;
         {error, _} = E ->
             E
@@ -66,9 +66,9 @@ update(TableName, Selection, Row, Connection) when is_atom(TableName) ->
     {Where, WhereArgs} = selection_where(Selection),
     Sql = [<<"UPDATE ">>, atom_to_list(TableName), " SET ", Sets, " WHERE ", Where],
     case Mod:fetchall(Sql, Vs ++ WhereArgs, Pid) of
-        {ok, {_, _, 0}} ->
+        {ok, {[{0}], _, _}} ->
             {error, enotfound};
-        {ok, {_, _, Nr}} ->
+        {ok, {[{Nr}], _, _}} ->
             {ok, Nr};
         {error, _} = E ->
             E

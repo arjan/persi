@@ -39,7 +39,7 @@ add(Connection, Opts) when is_atom(Connection), is_list(Opts) ->
 remove(Connection) when is_atom(Connection) ->
     case whereis_driver(Connection) of
         undefined ->
-            {error, enotfound};
+            throw({error, unknown_connection});
         Pid when is_pid(Pid) ->
             ok = supervisor:terminate_child(persi_driver_sup, Pid)
     end.
@@ -48,7 +48,7 @@ remove(Connection) when is_atom(Connection) ->
 driver_and_pid(Connection) ->
     case whereis_driver(Connection) of
         undefined ->
-            throw({error, {unknown_persi_connection, Connection}});
+            throw({error, unknown_connection});
         Pid ->
             {gproc:get_value({p, l, persi_driver_mod}, Pid), Pid}
     end.

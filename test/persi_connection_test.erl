@@ -25,11 +25,6 @@
 
 -define(DBFILE, ":memory:").
 
-setup() ->
-    application:start(gproc),
-    application:start(persi),
-    ok.
-
 dup_default_connection_test() ->
     application:start(gproc),
     application:start(persi),
@@ -53,12 +48,25 @@ dup_named_connection_test() ->
     ok.
 
 
+
+unknown_connection_test() ->
+    application:start(gproc),
+    application:start(persi),
+
+    case catch persi:remove_connection(sdfdfds) of
+        {error, unknown_connection} -> ok
+    end,
+
+    case catch persi:schema_info(sdfdfds) of
+        {error, unknown_connection} -> ok
+    end,
+    ok.
+
+
 add_remove_connection_test() ->
     application:start(gproc),
     application:start(persi),
 
-    {error, enotfound} = persi:remove_connection(asdf),
-    
     ok = persi:add_connection(asdf, [{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
     {error, eexist} = persi:add_connection(asdf, [{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
 

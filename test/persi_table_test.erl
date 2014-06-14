@@ -74,10 +74,17 @@ upsert_test() ->
     
     {ok, insert} = persi:upsert(demotable, 111, [{name, <<"Foo">>}]),
 
+    {ok, insert} = persi:upsert(demotable, [{id, 33333}], [{name, <<"Another row">>}]),
+    
     {ok, _} = persi:select(demotable, 111),
 
     {ok, 1} = persi:upsert(demotable, 111, [{name, <<"Bar">>}]),
     {ok, Row1} = persi:select(demotable, 111),
+
+    %% alternate selection mechanisms
+    {ok, Row1} = persi:select(demotable, [{id, 111}]),
+    {ok, Row1} = persi:select(demotable, [{name, <<"Bar">>}]),
+    
     111 = proplists:get_value(id, Row1),
     <<"Bar">> = proplists:get_value(name, Row1),
     
@@ -87,12 +94,32 @@ upsert_test() ->
     
     ok.
 
+unknown_table_test() ->
+    setup(),
+    
+    {error, _} = persi:delete(unknowntable, 123),
+    
+    persi:remove_connection(),
+    
+    ok.
+
+empty_selection_test() ->
+    setup(),
+    
+    case catch persi:select(demotable, []) of
+        {error, empty_selection} -> ok
+    end,
+    
+    persi:remove_connection(),
+    
+    ok.
 
 unknown_column_test() ->
     setup(),
     
     {error, enotfound} = persi:select(demotable, 123),
 
+    {error, {sqlite_error, _}} = persi:select(demotable, [{xxxid, 123}]),
     {error, {sqlite_error, _}} = persi:insert(demotable, [{id, 123}, {name, <<"Foo">>}, {meh, moeder}]),
     {error, {sqlite_error, _}} = persi:update(demotable, 123, [{name, <<"Foo">>}, {meh, moeder}]),
     {error, {sqlite_error, _}} = persi:upsert(demotable, 123, [{name, <<"Foo">>}, {meh, moeder}]),

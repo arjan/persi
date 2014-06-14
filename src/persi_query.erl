@@ -20,12 +20,7 @@
 
 -include_lib("persi/include/persi.hrl").
 
--export([q/3, fetchall/3]).
-
-q(Sql, Args, Connection) ->
-    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
-    Mod:q(Sql, Args, Pid).
-
+-export([fetchall/3]).
 
 fetchall(Sql, Args, Connection) ->
     {Mod, Pid} = persi_connection:driver_and_pid(Connection),
