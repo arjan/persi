@@ -63,7 +63,38 @@ create_table_test() ->
 schema_migration_test() ->
     persi:add_connection([{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
 
-    install = persi:manage_schema(schema_migrations_example),
-    noop = persi:manage_schema(schema_migrations_example),
+    meck:new(migrations_example, [non_strict]),
+
+    meck:expect(
+      migrations_example, manage,
+      fun(install, Connection) ->
+              persi:create_table(#persi_table{name=test, columns=[#persi_column{name=id, type=int, notnull=true}], pk=[id]}, Connection);
+         ({upgrade, 2}, Connection) ->
+              ok = persi:add_column(test, #persi_column{name=name, type="varchar(60)"}, Connection),
+              T = persi:table_info(test, Connection),
+              [id, name] = [C#persi_column.name || C <- T#persi_table.columns],
+              ok;
+         ({upgrade, 3}, Connection) ->
+              ok = persi:add_column(test, #persi_column{name=lastname, type="varchar(120)"}, Connection),
+              T = persi:table_info(test, Connection),
+              [id, name, lastname] = [C#persi_column.name || C <- T#persi_table.columns],
+              ok;
+         ({upgrade, 4}, Connection) ->
+              %% DROP COLUMN not supported by sqlite3
+              %%ok = persi:drop_column(test, name, Connection),
+
+              ok = persi:drop_table(test, Connection),
+              {error, enotfound} = persi:table_info(test, Connection),
+              ok
+      end
+     ),
+    
+    meck:expect(migrations_example, schema_version, fun() -> 1 end),
+    install = persi:manage_schema(migrations_example),
+    noop = persi:manage_schema(migrations_example),
+
+    meck:expect(migrations_example, schema_version, fun() -> 4 end),
+    {upgrade, 4} = persi:manage_schema(migrations_example),
+    noop = persi:manage_schema(migrations_example),
     
     ok.

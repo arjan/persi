@@ -31,6 +31,9 @@
     info/1,
     table_info/2,
     create_table/2,
+    drop_table/2,
+    add_column/3,
+    drop_column/3,
     manage/2
    ]).
 
@@ -60,6 +63,41 @@ create_table(TableDef, Connection) ->
             {error, eexist}
     end.
 
+-spec drop_table(persi:table(), persi:connection()) -> ok | {error, enotfound}.
+drop_table(TableName, Connection) ->
+    case table_info(TableName, Connection) of
+        #persi_table{} ->
+            {Mod, Pid} = persi_connection:driver_and_pid(Connection),
+            Mod:exec([<<"DROP TABLE ">>, atom_to_list(TableName)], Pid),
+            Mod:flush_metadata(Pid);
+        {error, enotfound} ->
+            {error, enotfound}
+    end.
+
+-spec add_column(persi:table(), persi:column(), persi:connection()) -> ok | {error, enotfound}.
+add_column(TableName, ColumnDef, Connection) ->
+    case table_info(TableName, Connection) of
+        #persi_table{} ->
+            {Mod, Pid} = persi_connection:driver_and_pid(Connection),
+            Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" ADD COLUMN ">>,
+                     create_column_sql(ColumnDef)], Pid),
+            Mod:flush_metadata(Pid);
+        {error, enotfound} ->
+            {error, enotfound}
+    end.
+
+-spec drop_column(persi:table(), atom(), persi:connection()) -> ok | {error, enotfound}.
+drop_column(TableName, ColumnName, Connection) ->
+    case table_info(TableName, Connection) of
+        #persi_table{} ->
+            {Mod, Pid} = persi_connection:driver_and_pid(Connection),
+            Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" DROP COLUMN ">>,
+                      atom_to_list(ColumnName)], Pid),
+            Mod:flush_metadata(Pid);
+        {error, enotfound} ->
+            {error, enotfound}
+    end.
+
 -spec manage(module(), persi:connection()) -> persi:manage_result().
 manage(SchemaModule, Connection) ->
     case table_info(schema_version, Connection) of
@@ -84,7 +122,8 @@ manage(SchemaModule, Connection) ->
         [{Version}] ->
             noop;
         [{OlderVersion}] when OlderVersion < Version ->
-            ok = SchemaModule:manage({upgrade, Version}, Connection),
+            Upgrades = lists:seq(OlderVersion+1, Version),
+            [ok = SchemaModule:manage({upgrade, V}, Connection) || V <- Upgrades],
             persi:q(<<"UPDATE schema_version SET version = ? WHERE schema = ?">>, [Version, SchemaModule], Connection),
             {upgrade, Version};
         [{_}] ->

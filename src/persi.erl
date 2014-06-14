@@ -24,8 +24,11 @@
 
 -export(
    [
+    %% persi_connection wrappers
     add_connection/1,
     add_connection/2,
+
+    %% persi_table wrappers
     insert/2,
     insert/3,
     update/3,
@@ -36,14 +39,24 @@
     delete/3,
     select/2,
     select/3,
+
+    %% persi_schema wrappers
     schema_info/0,
     schema_info/1,
     table_info/1,
     table_info/2,
     create_table/1,
     create_table/2,
+    drop_table/1,
+    drop_table/2,
+    add_column/2,
+    add_column/3,
+    drop_column/2,
+    drop_column/3,
     manage_schema/1,
     manage_schema/2,
+    
+    %% persi_query wrappers
     q/2,
     q/3
    ]).
@@ -158,6 +171,31 @@ create_table(Table, ?DEFAULT_CONNECTION).
 -spec create_table(table_info(), connection()) -> ok | {error, eexist}.
 create_table(Table, Conn) ->
     persi_schema:create_table(Table, Conn).
+
+-spec drop_table(table_info()) -> ok | {error, enotfound}.
+drop_table(Table) ->
+    drop_table(Table, ?DEFAULT_CONNECTION).
+
+-spec drop_table(table_info(), connection()) -> ok | {error, enotfound}.
+drop_table(Table, Conn) ->
+    persi_schema:drop_table(Table, Conn).
+
+-spec add_column(table(), #persi_column{}) -> ok | {error, enotfound}.
+add_column(Table, Column) ->
+    add_column(Table, Column, ?DEFAULT_CONNECTION).
+
+-spec add_column(table(), #persi_column{}, connection()) -> ok | {error, enotfound}.
+add_column(Table, Column, Conn) ->
+    persi_schema:add_column(Table, Column, Conn).
+
+-spec drop_column(table(), atom()) -> ok | {error, enotfound}.
+drop_column(Table, ColumnName) ->
+    drop_column(Table, ColumnName, ?DEFAULT_CONNECTION).
+
+-spec drop_column(table(), atom(), connection()) -> ok | {error, enotfound}.
+drop_column(Table, ColumnName, Conn) ->
+    persi_schema:drop_column(Table, ColumnName, Conn).
+
 
 -spec manage_schema(module()) -> manage_result().
 manage_schema(Module) ->

@@ -9,8 +9,8 @@ compile: $(REBAR)
 	$(REBAR) get-deps compile
 
 test: $(REBAR)
-	$(REBAR) get-dep compile
-	$(REBAR) eunit -v skip_deps=true
+	$(REBAR) -C rebar.test.config get-dep compile
+	$(REBAR) -C rebar.test.config eunit -v skip_deps=true
 
 clean: $(REBAR)
 	$(REBAR) clean
