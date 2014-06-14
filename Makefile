@@ -12,7 +12,7 @@ test: $(REBAR)
 	$(REBAR) get-dep compile
 	$(REBAR) eunit -v skip_deps=true
 
-clean:
+clean: $(REBAR)
 	$(REBAR) clean
 
 ./rebar:
