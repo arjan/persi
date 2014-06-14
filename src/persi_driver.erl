@@ -24,6 +24,10 @@
 -callback table_info(persi:table(), pid()) ->
     persi_table:info().
 
+-callback exec(persi:sql(), pid()) ->
+    ok | {ok, RowsAffected :: non_neg_integer()}.
+
+
 -export([start_driver/2, reg/1]).
 
 -spec start_driver(persi:connection(), persi:connection_opts()) -> {ok, pid()}.
@@ -34,5 +38,4 @@ start_driver(Id, Opts) ->
 
 %% @doc MUST be called from the driver that is registering itself
 reg(Module) ->
-    io:format(user, "~p~n", [Module]),
     gproc:reg({p, l, persi_driver_mod}, Module).

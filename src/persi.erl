@@ -46,7 +46,10 @@
     schema_info/1,
 
     table_info/1,
-    table_info/2
+    table_info/2,
+
+    create_table/1,
+    create_table/2
     
    ]).
 
@@ -65,6 +68,9 @@
 -type connection() :: atom().
 -type connection_opts() :: [connection_opt()].
 -type connection_opt() :: {driver, module()}.
+
+-type schema_info() :: #persi_schema{}.
+-type table_info() :: #persi_table{}.
 
 
 %%% CONNECTION %%%
@@ -126,20 +132,28 @@ select(Table, Id, Conn) ->
 
 %%% SCHEMA %%%
 
--spec schema_info() -> persi_schema:info().
+-spec schema_info() -> #persi_schema{}.
 schema_info() ->
     schema_info(?DEFAULT_CONNECTION).
 
--spec schema_info(connection()) -> persi_schema:info().
+-spec schema_info(connection()) -> schema_info().
 schema_info(Conn) ->
     persi_schema:info(Conn).
 
 
--spec table_info(table()) -> persi_schema:table_info().
+-spec table_info(table()) -> table_info().
 table_info(Table) ->
     table_info(Table, ?DEFAULT_CONNECTION).
 
--spec table_info(table(), connection()) -> persi_schema:table_info().
+-spec table_info(table(), connection()) -> table_info().
 table_info(Table, Conn) ->
     persi_schema:table_info(Table, Conn).
 
+
+-spec create_table(table_info()) -> ok | {error, eexist}.
+create_table(Table) ->
+create_table(Table, ?DEFAULT_CONNECTION).
+
+-spec create_table(table_info(), connection()) -> ok | {error, eexist}.
+create_table(Table, Conn) ->
+    persi_schema:create_table(Table, Conn).

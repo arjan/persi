@@ -18,6 +18,11 @@
 
 -record(persi_schema, {tables=[]}).
 
--record(persi_column, {name, type, default, notnull}).
+-record(persi_column, {name,
+                       type,
+                       default=undefined,
+                       notnull=false}).
 
--record(persi_table, {name, columns=[], pk=[]}).
+-record(persi_table, {name, columns=[], pk=[], fks=[]}).
+
+-record(persi_fk, {table, from, to}).
