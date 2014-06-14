@@ -24,7 +24,7 @@
 
 %% @doc Return metadata information about the table
 -callback table_info(persi:table(), pid()) ->
-    persi:table_info().
+    {ok, persi:table_info()} | {error, enotfound}.
 
 %% @doc Execute a plain SQL query
 -callback exec(persi:sql(), pid()) ->

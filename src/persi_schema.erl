@@ -44,7 +44,7 @@ info(Connection) ->
     {Mod, Pid} = persi_connection:driver_and_pid(Connection),
     Mod:schema_info(Pid).
 
--spec table_info(persi:table(), persi:connection()) -> persi:table_info().
+-spec table_info(persi:table(), persi:connection()) -> {ok, persi:table_info()} | {error, enotfound}.
 table_info(TableName, Connection) ->
     {Mod, Pid} = persi_connection:driver_and_pid(Connection),
     Mod:table_info(TableName,Pid).
@@ -58,14 +58,14 @@ create_table(TableDef, Connection) ->
             SQL = create_table_sql(TableDef),
             ok = Mod:exec(SQL, Pid),
             ok = Mod:flush_metadata(Pid);
-        #persi_table{} ->
+        {ok, #persi_table{}} ->
             {error, eexist}
     end.
 
 -spec drop_table(persi:table(), persi:connection()) -> ok | {error, enotfound}.
-drop_table(TableName, Connection) ->
+drop_table(TableName, Connection) when is_atom(TableName) ->
     case table_info(TableName, Connection) of
-        #persi_table{} ->
+        {ok, #persi_table{}} ->
             {Mod, Pid} = persi_connection:driver_and_pid(Connection),
             ok = Mod:exec([<<"DROP TABLE ">>, atom_to_list(TableName)], Pid),
             ok = Mod:flush_metadata(Pid);
@@ -76,7 +76,7 @@ drop_table(TableName, Connection) ->
 -spec add_column(persi:table(), persi:column_info(), persi:connection()) -> ok | {error, enotfound}.
 add_column(TableName, ColumnDef, Connection) ->
     case table_info(TableName, Connection) of
-        #persi_table{} ->
+        {ok, #persi_table{}} ->
             {Mod, Pid} = persi_connection:driver_and_pid(Connection),
             ok = Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" ADD COLUMN ">>,
                            create_column_sql(ColumnDef)], Pid),
@@ -88,7 +88,7 @@ add_column(TableName, ColumnDef, Connection) ->
 -spec drop_column(persi:table(), atom(), persi:connection()) -> ok | {error, enotfound}.
 drop_column(TableName, ColumnName, Connection) ->
     case table_info(TableName, Connection) of
-        #persi_table{} ->
+        {ok, #persi_table{}} ->
             {Mod, Pid} = persi_connection:driver_and_pid(Connection),
             ok = Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" DROP COLUMN ">>,
                            atom_to_list(ColumnName)], Pid),
@@ -108,7 +108,7 @@ manage(SchemaModule, Connection) ->
                                          #persi_column{name=version, type=int, notnull=true, default=1}
                                         ],
                                 pk=[schema]}, Connection);
-        _ ->
+        {ok, _} ->
             nop
     end,
     Version = SchemaModule:schema_version(),

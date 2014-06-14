@@ -106,8 +106,7 @@
 -type manage_result() :: install | noop | {upgrade, non_neg_integer()}.
 
 -type sql() :: binary() | iolist().
--type sql_args() :: [sql_arg()].
--type sql_arg() :: [string() | integer() | atom()].
+-type sql_args() :: [] | [term()].
 -type sql_result() :: term().
 
 -type column_names() :: tuple().
@@ -132,38 +131,38 @@ remove_connection(Conn) ->
 
 %%% TABLE %%%
 
--spec insert(table(), row()) -> {ok, non_neg_integer()}.
+-spec insert(table(), row()) -> ok | error().
 insert(Table, Data) ->
     insert(Table, Data, ?DEFAULT_CONNECTION).
 
--spec insert(table(), row(), connection()) -> {ok, non_neg_integer()}.
+-spec insert(table(), row(), connection()) -> ok | error().
 insert(Table, Data, Conn) ->
     persi_table:insert(Table, Data, Conn).
 
 
--spec update(table(), id(), row()) -> {ok, non_neg_integer()}.
+-spec update(table(), id(), row()) -> {ok, non_neg_integer()} | error().
 update(Table, Id, Data) ->
     update(Table, Id, Data, ?DEFAULT_CONNECTION).
 
--spec update(table(), id(), row(), connection()) -> {ok, non_neg_integer()}.
+-spec update(table(), id(), row(), connection()) -> {ok, non_neg_integer()} | error().
 update(Table, Id, Data, Conn) ->
     persi_table:update(Table, Id, Data, Conn).
 
 
--spec upsert(table(), id(), row()) -> {ok, non_neg_integer()}.
+-spec upsert(table(), id(), row()) -> {ok, non_neg_integer()} | error().
 upsert(Table, Id, Data) ->
     upsert(Table, Id, Data, ?DEFAULT_CONNECTION).
 
--spec upsert(table(), id(), row(), connection()) -> {non_neg_integer, id()}.
+-spec upsert(table(), id(), row(), connection()) -> {ok, non_neg_integer()} | error().
 upsert(Table, Id, Data, Conn) ->
     persi_table:upsert(Table, Id, Data, Conn).
 
 
--spec delete(table(), id()) -> ok | error().
+-spec delete(table(), id()) -> {ok, non_neg_integer()} | error().
 delete(Table, Id) ->
     delete(Table, Id, ?DEFAULT_CONNECTION).
 
--spec delete(table(), id(), connection()) -> {ok, id()}.
+-spec delete(table(), id(), connection()) -> {ok, non_neg_integer()} | error().
 delete(Table, Id, Conn) ->
     persi_table:delete(Table, Id, Conn).
 
@@ -188,11 +187,11 @@ schema_info(Conn) ->
     persi_schema:info(Conn).
 
 
--spec table_info(table()) -> table_info().
+-spec table_info(table()) -> {ok, table_info()} | {error, enotfound}.
 table_info(Table) ->
     table_info(Table, ?DEFAULT_CONNECTION).
 
--spec table_info(table(), connection()) -> table_info().
+-spec table_info(table(), connection()) -> {ok, table_info()} | {error, enotfound}.
 table_info(Table, Conn) ->
     persi_schema:table_info(Table, Conn).
 
@@ -205,11 +204,11 @@ create_table(Table) ->
 create_table(Table, Conn) ->
     persi_schema:create_table(Table, Conn).
 
--spec drop_table(table_info()) -> ok | {error, enotfound}.
+-spec drop_table(table()) -> ok | {error, enotfound}.
 drop_table(Table) ->
     drop_table(Table, ?DEFAULT_CONNECTION).
 
--spec drop_table(table_info(), connection()) -> ok | {error, enotfound}.
+-spec drop_table(table(), connection()) -> ok | {error, enotfound}.
 drop_table(Table, Conn) ->
     persi_schema:drop_table(Table, Conn).
 

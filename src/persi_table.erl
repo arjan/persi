@@ -30,7 +30,7 @@
    ]).
 
 
--spec insert(persi:table(), persi:row(), persi:connection()) -> {ok, persi:id()} | persi:error().
+-spec insert(persi:table(), persi:row(), persi:connection()) -> ok | persi:error().
 insert(TableName, Row, Connection) when is_atom(TableName) ->
     {Mod, Pid} = persi_connection:driver_and_pid(Connection),
 
@@ -55,7 +55,7 @@ insert(TableName, Row, Connection) when is_atom(TableName) ->
     end.
 
 
--spec update(persi:table(), persi:selection(), persi:row(), persi:connection()) -> ok | persi:error().
+-spec update(persi:table(), persi:selection(), persi:row(), persi:connection()) -> {ok, non_neg_integer()} | persi:error().
 update(TableName, Selection, Row, Connection) when is_atom(TableName) ->
     {Mod, Pid} = persi_connection:driver_and_pid(Connection),
 
@@ -74,7 +74,7 @@ update(TableName, Selection, Row, Connection) when is_atom(TableName) ->
             E
     end.
 
--spec upsert(persi:table(), persi:selection(), persi:row(), persi:connection()) -> ok | persi:error().
+-spec upsert(persi:table(), persi:selection(), persi:row(), persi:connection()) -> {ok, non_neg_integer()} | persi:error().
 upsert(TableName, Selection, Row, Connection) when is_atom(TableName) ->
     case update(TableName, Selection, Row, Connection) of
         {ok, _} = R ->
@@ -86,7 +86,7 @@ upsert(TableName, Selection, Row, Connection) when is_atom(TableName) ->
             E
     end.
 
--spec delete(persi:table(), persi:selection(), persi:connection()) -> ok | persi:error().
+-spec delete(persi:table(), persi:selection(), persi:connection()) -> {ok, non_neg_integer()} | persi:error().
 delete(TableName, Selection, Connection) when is_atom(TableName) ->
     {Mod, Pid} = persi_connection:driver_and_pid(Connection),
 
@@ -125,7 +125,7 @@ rowterm(R) ->
     R.
 
 
--spec selection_where(persi:selection()) -> {WhereClause::binary(), persi:sql_args()}.
+-spec selection_where(persi:selection()) -> {iolist(), persi:sql_args()}.
 selection_where(Simple) when not(is_list(Simple)) ->
     selection_where(rowterm(Simple));
 selection_where([]) ->
