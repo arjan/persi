@@ -30,7 +30,6 @@ dup_named_connection_test() ->
     {error, eexist} = persi:add_connection(sqlite1, []),
     ok.
 
-
 schema_info_test() ->
     application:start(gproc),
     application:start(persi),
@@ -61,3 +60,10 @@ create_table_test() ->
     {error, eexist} = persi:create_table(Table),
     ok.
 
+schema_migration_test() ->
+    persi:add_connection([{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
+
+    install = persi:manage_schema(schema_migrations_example),
+    noop = persi:manage_schema(schema_migrations_example),
+    
+    ok.

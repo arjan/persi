@@ -18,11 +18,20 @@
 
 -module(persi_schema).
 
+
+-callback schema_version() ->
+    non_neg_integer().
+
+-callback manage(install | {upgrade, non_neg_integer()}, persi:connection()) ->
+    ok.
+
+
 -export(
    [
     info/1,
     table_info/2,
-    create_table/2
+    create_table/2,
+    manage/2
    ]).
 
 -include_lib("persi/include/persi.hrl").
@@ -50,6 +59,39 @@ create_table(TableDef, Connection) ->
         #persi_table{} ->
             {error, eexist}
     end.
+
+-spec manage(module(), persi:connection()) -> persi:manage_result().
+manage(SchemaModule, Connection) ->
+    case table_info(schema_version, Connection) of
+        {error, enotfound} ->
+            create_table(#persi_table{name=schema_version,
+                                      columns=[
+                                               #persi_column{name=schema, type="varchar(255)", notnull=true},
+                                               #persi_column{name=version, type=int, notnull=true, default=1}
+                                              ],
+                                      pk=[schema]}, Connection);
+        _ ->
+            nop
+    end,
+    Version = SchemaModule:schema_version(),
+    case persi:q(<<"SELECT version FROM schema_version WHERE schema = ?">>, [SchemaModule], Connection) of
+        [] ->
+            %% install
+            ok = SchemaModule:manage(install, Connection),
+            %% insert version
+            persi:q(<<"INSERT INTO schema_version (schema, version) VALUES (?, ?)">>, [SchemaModule, Version], Connection),
+            install;
+        [{Version}] ->
+            noop;
+        [{OlderVersion}] when OlderVersion < Version ->
+            ok = SchemaModule:manage({upgrade, Version}, Connection),
+            persi:q(<<"UPDATE schema_version SET version = ? WHERE schema = ?">>, [Version, SchemaModule], Connection),
+            {upgrade, Version};
+        [{_}] ->
+            throw({error, schema_downgrade})
+    end.
+
+
 
 with_commas([]) -> [];
 with_commas([X]) -> [X];
@@ -84,6 +126,8 @@ map_sql_type(T) when is_atom(T) ->
 
 map_sql_default(undefined) ->
     "";
+map_sql_default(T) when is_integer(T) ->
+    map_sql_default(integer_to_list(T));
 map_sql_default(X) when is_binary(X); is_list(X) ->
     ["DEFAULT '", X, "'"].
 

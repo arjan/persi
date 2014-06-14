@@ -35,7 +35,8 @@
     schema_info/1,
     table_info/2,
     exec/2,
-    flush_metadata/1
+    flush_metadata/1,
+    q/3
    ]).
 
 %% interface functions
@@ -63,6 +64,9 @@ exec(Sql, Pid) ->
 
 flush_metadata(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, flush_metadata).
+
+q(Sql, Args, Pid) when is_pid(Pid) ->
+    gen_server:call(Pid, {q, Sql, Args}).
 
 
 %%====================================================================
@@ -101,6 +105,9 @@ handle_call({table_info, Table}, _From, State=#state{metadata=Metadata}) ->
 
 handle_call({exec, Sql}, _From, State) ->
     {reply, esqlite3:exec(iolist_to_binary(Sql), State#state.db), State};
+
+handle_call({q, Sql, Args}, _From, State) ->
+    {reply, esqlite3:q(iolist_to_binary(Sql), Args, State#state.db), State};
 
 handle_call(flush_metadata, _From, State) ->
     {reply, ok, State#state{metadata=do_schema_info(State#state.db)}};

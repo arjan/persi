@@ -26,35 +26,30 @@
    [
     add_connection/1,
     add_connection/2,
-    
     insert/2,
     insert/3,
-
     update/3,
     update/4,
-
     upsert/3,
     upsert/4,
-
     delete/2,
     delete/3,
-
     select/2,
     select/3,
-
     schema_info/0,
     schema_info/1,
-
     table_info/1,
     table_info/2,
-
     create_table/1,
-    create_table/2
-    
+    create_table/2,
+    manage_schema/1,
+    manage_schema/2,
+    q/2,
+    q/3
    ]).
 
 %% Types start here
--export_type([id/0, table/0, row/0, col_name/0, col_value/0, connection/0, error/0]).
+-export_type([id/0, table/0, row/0, col_name/0, col_value/0, connection/0, error/0, sql/0, sql_args/0, sql_result/0, manage_result/0]).
 
 -type error() :: {error, atom()}.
 
@@ -71,6 +66,12 @@
 
 -type schema_info() :: #persi_schema{}.
 -type table_info() :: #persi_table{}.
+-type manage_result() :: install | noop | {upgrade, non_neg_integer()}.
+
+-type sql() :: iolist().
+-type sql_args() :: [sql_arg()].
+-type sql_arg() :: [string() | integer() | atom()].
+-type sql_result() :: term().
 
 
 %%% CONNECTION %%%
@@ -157,3 +158,21 @@ create_table(Table, ?DEFAULT_CONNECTION).
 -spec create_table(table_info(), connection()) -> ok | {error, eexist}.
 create_table(Table, Conn) ->
     persi_schema:create_table(Table, Conn).
+
+-spec manage_schema(module()) -> manage_result().
+manage_schema(Module) ->
+    manage_schema(Module, ?DEFAULT_CONNECTION).
+
+-spec manage_schema(module(), connection()) -> manage_result().
+manage_schema(Module, Conn) ->
+    persi_schema:manage(Module, Conn).
+
+
+-spec q(sql(), sql_args()) -> sql_result().
+q(Sql, Args) ->
+    q(Sql, Args, ?DEFAULT_CONNECTION).
+
+-spec q(sql(), sql_args(), connection()) -> sql_result().
+q(Sql, Args, Conn) ->
+    persi_query:q(Sql, Args, Conn).
+

@@ -29,6 +29,8 @@
 
 -callback flush_metadata(pid()) -> ok.
 
+-callback q(persi:sql(), persi:sql_args(), pid()) -> persi:sql_result().
+
 
 -export([start_driver/2, reg/1]).
 
