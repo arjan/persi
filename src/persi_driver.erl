@@ -44,7 +44,8 @@
 -spec start_driver(persi:connection(), persi:connection_opts()) -> {ok, pid()}.
 start_driver(Id, Opts) ->
     {driver, DriverModule} = proplists:lookup(driver, Opts),
-    gen_server:start_link({via, gproc, {n, l, {persi_driver, Id}}}, DriverModule, {Id, Opts}, []).
+    Opts1 = proplists:delete(driver, Opts),
+    gen_server:start_link({via, gproc, {n, l, {persi_driver, Id}}}, DriverModule, {Id, Opts1}, []).
 
 
 %% @doc MUST be called from the driver that is registering itself

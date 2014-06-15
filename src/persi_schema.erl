@@ -104,28 +104,28 @@ manage(SchemaModule, Connection) ->
             ok = create_table(
                    #persi_table{name=schema_version,
                                 columns=[
-                                         #persi_column{name=schema, type="varchar(255)", notnull=true},
+                                         #persi_column{name=schema_module, type="varchar(255)", notnull=true},
                                          #persi_column{name=version, type=int, notnull=true, default=1}
                                         ],
-                                pk=[schema]}, Connection);
+                                pk=[schema_module]}, Connection);
         {ok, _} ->
             nop
     end,
     Version = SchemaModule:schema_version(),
-    {ok, SchemaResult} = persi:fetchall(<<"SELECT version FROM schema_version WHERE schema = ?">>, [SchemaModule], Connection),
+    {ok, SchemaResult} = persi:fetchall(<<"SELECT version FROM schema_version WHERE schema_module = ?">>, [SchemaModule], Connection),
     case SchemaResult of
         {[], _, _} ->
             %% install
             ok = SchemaModule:manage(install, Connection),
             %% insert version
-            persi:fetchall(<<"INSERT INTO schema_version (schema, version) VALUES (?, ?)">>, [SchemaModule, Version], Connection),
+            persi:fetchall(<<"INSERT INTO schema_version (schema_module, version) VALUES (?, ?)">>, [SchemaModule, Version], Connection),
             install;
         {[{Version}], _, _} ->
             noop;
         {[{OlderVersion}], _, _} when OlderVersion < Version ->
             Upgrades = lists:seq(OlderVersion+1, Version),
             [ok = SchemaModule:manage({upgrade, V}, Connection) || V <- Upgrades],
-            persi:fetchall(<<"UPDATE schema_version SET version = ? WHERE schema = ?">>, [Version, SchemaModule], Connection),
+            persi:fetchall(<<"UPDATE schema_version SET version = ? WHERE schema_module = ?">>, [Version, SchemaModule], Connection),
             {upgrade, Version};
         {[{_}], _, _} ->
             throw({error, schema_downgrade})

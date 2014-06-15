@@ -3,7 +3,14 @@ setup() ->
     application:start(gproc),
     application:start(persi),
 
-    DriverOpts = case os:getenv("PERSI_DB") of
+    DriverOpts = case os:getenv("PERSI_DBDRIVER") of
+                     "mysql" ->
+
+                         crypto:start(),
+                         application:start(emysql),
+                         
+                         [{driver, persi_driver_emysql}, {user, "root"}, {password, "nfgcoal"}, {database, "testdb"}];
+                     
                      _ ->
                          [{driver, persi_driver_esqlite}, {dbfile, ":memory:"}]
                  end,
