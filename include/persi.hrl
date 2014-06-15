@@ -23,6 +23,9 @@
                        default=undefined,
                        notnull=false}).
 
--record(persi_table, {name, columns=[], pk=[], fks=[]}).
+-record(persi_table, {name, columns=[], pk=[], fks=[], has_props=false}).
 
 -record(persi_fk, {table, from, to}).
+
+-define(persi_props_column_name, props).
+-define(persi_props_column, #persi_column{name=?persi_props_column_name, type=blob, default=term_to_binary([]), notnull=true}).

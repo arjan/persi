@@ -31,9 +31,11 @@
 
 
 -spec insert(persi:table(), persi:row(), persi:connection()) -> ok | persi:error().
-insert(TableName, Row, Connection) when is_atom(TableName) ->
-    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
+insert(TableName, Row0, Connection) when is_atom(TableName) ->
 
+    {ok, TableInfo} = persi_schema:table_info(TableName, Connection),
+    Row = opt_fold_props(TableInfo, Row0, undefined, Connection),
+    
     {Cols, Args} = lists:foldr(
                      fun({K, V}, {C0, A0}) ->
                              {[atom_to_list(K)|C0], [V|A0]}
@@ -47,6 +49,8 @@ insert(TableName, Row, Connection) when is_atom(TableName) ->
            ") VALUES (",
            persi_util:iolist_join([$? || _ <- lists:seq(1, length(Cols))], $,),
            ")"],
+
+    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
     case Mod:fetchall(Sql, Args, Pid) of
         {ok, {[{1}], _, _}} ->
             ok;
@@ -56,8 +60,10 @@ insert(TableName, Row, Connection) when is_atom(TableName) ->
 
 
 -spec update(persi:table(), persi:selection(), persi:row(), persi:connection()) -> {ok, non_neg_integer()} | persi:error().
-update(TableName, Selection, Row, Connection) when is_atom(TableName) ->
-    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
+update(TableName, Selection, Row0, Connection) when is_atom(TableName) ->
+
+    {ok, TableInfo} = persi_schema:table_info(TableName, Connection),
+    Row = opt_fold_props(TableInfo, Row0, Selection, Connection),
 
     {Ks,Vs} = lists:unzip(Row),
     Sets = persi_util:iolist_join(
@@ -65,6 +71,8 @@ update(TableName, Selection, Row, Connection) when is_atom(TableName) ->
     
     {Where, WhereArgs} = selection_where(Selection),
     Sql = [<<"UPDATE ">>, atom_to_list(TableName), " SET ", Sets, " WHERE ", Where],
+
+    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
     case Mod:fetchall(Sql, Vs ++ WhereArgs, Pid) of
         {ok, {[{0}], _, _}} ->
             {error, enotfound};
@@ -103,6 +111,7 @@ delete(TableName, Selection, Connection) when is_atom(TableName) ->
 
 -spec select(persi:table(), persi:selection(), persi:connection()) -> {ok, persi:row()} | persi:error().
 select(TableName, Selection, Connection) when is_atom(TableName) ->
+
     {Mod, Pid} = persi_connection:driver_and_pid(Connection),
 
     {Where, Args} = selection_where(Selection),
@@ -112,8 +121,8 @@ select(TableName, Selection, Connection) when is_atom(TableName) ->
         {ok, {[], _, _}} ->
             {error, enotfound};
         {ok, {[Values], Columns, _}} ->
-            Row = lists:zip(tuple_to_list(Columns), tuple_to_list(Values)),
-            {ok, Row};
+            {ok, TableInfo} = persi_schema:table_info(TableName, Connection),
+            {ok, values_to_row(Values, Columns, TableInfo)};
         {error, _} = E ->
             E
     end.
@@ -140,3 +149,54 @@ selection_where(KVs) when is_list(KVs) ->
     {persi_util:iolist_join(Clauses, " AND "), Args}.
 
                                    
+opt_fold_props(#persi_table{has_props=false}, Row, _, _) ->
+    Row;
+opt_fold_props(#persi_table{has_props=true, columns=Columns, name=TableName}, Row, PK, Connection) ->
+    ColNames = [C#persi_column.name || C <- Columns],
+    %% split row
+    {ColData, Props0} =
+        lists:partition(fun({K, _}) -> lists:member(K, ColNames) end,
+                        Row),
+    Props = case PK of
+                undefined ->
+                    Props0;
+                _ ->
+                    %% merge props on update
+                    {Where, WhereArgs} = selection_where(PK),
+                    Sql = [<<"SELECT ">>, atom_to_list(?persi_props_column_name), <<" FROM ">>, atom_to_list(TableName), " WHERE ", Where],
+
+                    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
+                    case Mod:fetchall(Sql, WhereArgs, Pid) of
+                        {ok, {[], _, _}} ->
+                            Props0;
+                        {ok, {[{ExistingPropsBin}], _, _}} ->
+                            merge_props(Props0, binary_to_term(ExistingPropsBin))
+                    end
+            end,
+    [{?persi_props_column_name, term_to_binary(Props)} | ColData].
+
+            
+values_to_row(Values, Columns, TableInfo) ->
+    Row = lists:zip(tuple_to_list(Columns), tuple_to_list(Values)),
+    case TableInfo#persi_table.has_props of
+        false ->
+            Row;
+        true ->
+            Props0 = binary_to_term(proplists:get_value(?persi_props_column_name, Row)),
+            Props = case Props0 of {X} -> X; X -> X end, %% unwrap legacy
+            proplists:delete(?persi_props_column_name, Row) ++ Props
+    end.
+
+merge_props(New, {Old}) ->
+    merge_props(New, Old); %% unwrap legacy
+merge_props(New, Old) ->
+    lists:foldr(
+      fun({K, V}, Acc) ->
+              [{K, V} | 
+               case proplists:lookup(K, Acc) of
+                   {K, _} -> proplists:delete(K, Acc);
+                   none -> Acc
+               end]
+      end,
+      Old,
+      New).

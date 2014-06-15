@@ -14,13 +14,14 @@ Design goals
 * Database schema versioning and migrations
 * No result caching - caching should be done in application code
 * Metadata caching (table / schema info) in driver layer
+* Optionally allow for arbitrary data in tables (serialized in a blob column)
 
 
 To do list
 ----------
+* Data migration from / to props column when adding/dropping columns
 * Aiming for 100% test coverage
 * Foreign key tests
-* Optionally allow for arbitrary data in tables (serialized in a blob column)
 * Implement multiple database backends (currently only SQLite)
 * Connection pooling (for applicable backends)
 

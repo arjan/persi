@@ -169,10 +169,13 @@ do_table_info(TableName, Connection) ->
                                                  notnull=NotNull =/= 0}, PrimaryKey =/= 0}
                           end,
                           [<<"PRAGMA table_info('">>, erlang:atom_to_binary(TableName, utf8), <<"');">>], Connection),
-    {Cols, PKs} = lists:mapfoldl(fun({C=#persi_column{name=Name}, true}, Acc) -> {C, [Name|Acc]};
-                                    ({C, false}, Acc) -> {C, Acc} end,
-                                 [],
-                                 WithPK),
+    {Cols, {PKs, HasProps}} =
+        lists:mapfoldl(fun({C=#persi_column{name=Name}, true}, {Acc, HasProps}) ->
+                               {C, {[Name|Acc], HasProps orelse Name =:= ?persi_props_column_name}};
+                          ({C=#persi_column{name=Name}, false}, {Acc, HasProps}) ->
+                               {C, {Acc, HasProps orelse Name =:= ?persi_props_column_name}} end,
+                       {[], false},
+                       WithPK),
     FKs = esqlite3:map(fun({_Cid, _Seq, Table, From, To, _OnUpdate, _OnDelete, _Match}) -> 
                                #persi_fk{table=erlang:binary_to_atom(Table, utf8),
                                          from=erlang:binary_to_atom(From, utf8),
@@ -187,6 +190,7 @@ do_table_info(TableName, Connection) ->
                name=TableName,
                columns=Cols,
                pk=PKs,
-               fks=FKs}
+               fks=FKs,
+               has_props=HasProps}
     end.
 
