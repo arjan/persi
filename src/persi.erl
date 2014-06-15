@@ -109,7 +109,7 @@
 -type sql_args() :: [] | [term()].
 -type sql_result() :: term().
 
--type column_names() :: tuple().
+-type column_names() :: list(atom()).
 
 %%% CONNECTION %%%
 -spec add_connection(connection_opts()) -> ok | {error, eexist}.
