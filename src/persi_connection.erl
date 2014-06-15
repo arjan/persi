@@ -20,20 +20,20 @@
 
 -export(
    [
-    add/2,
+    add/3,
     remove/1,
     lookup_driver/1
    ]).
 
 -include("persi_int.hrl").
 
--spec add(persi:connection(), persi:connection_opts()) -> ok | {error, eexist}.
-add(Connection, Opts) when is_atom(Connection), is_list(Opts) ->
+-spec add(persi:connection(), module(), persi:connection_opts()) -> ok | {error, eexist}.
+add(Connection, DriverModule, Opts) when is_atom(Connection), is_list(Opts) ->
     case lookup_driver_(Connection) of
         #persi_driver{} ->
             {error, eexist};
         undefined ->
-            {ok, _Pid} = supervisor:start_child(persi_driver_sup, [Connection, Opts]),
+            {ok, _Pid} = supervisor:start_child(persi_driver_sup, [Connection, DriverModule, Opts]),
             ok
     end.
 

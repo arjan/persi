@@ -29,8 +29,8 @@ dup_default_connection_test() ->
     application:start(gproc),
     application:start(persi),
 
-    ok = persi:add_connection([{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
-    {error, eexist} = persi:add_connection([]),
+    ok = persi:add_connection(persi_driver_esqlite, [{dbfile, ?DBFILE}]),
+    {error, eexist} = persi:add_connection(persi_driver_esqlite, []),
 
     ok = persi:remove_connection(),
     ok.
@@ -39,10 +39,10 @@ dup_named_connection_test() ->
     application:start(gproc),
     application:start(persi),
 
-    ok = persi:add_connection(sqlite1, [{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
-    ok = persi:add_connection(sqlite2, [{driver, persi_driver_esqlite}, {dbfile, "/tmp/test1.db"}]),
+    ok = persi:add_connection(sqlite1, persi_driver_esqlite, [{dbfile, ?DBFILE}]),
+    ok = persi:add_connection(sqlite2, persi_driver_esqlite, [{dbfile, "/tmp/test1.db"}]),
     
-    {error, eexist} = persi:add_connection(sqlite1, []),
+    {error, eexist} = persi:add_connection(sqlite1, persi_driver_esqlite, []),
     ok = persi:remove_connection(sqlite1),
     ok = persi:remove_connection(sqlite2),
     ok.
@@ -69,12 +69,12 @@ add_remove_connection_test() ->
     application:start(gproc),
     application:start(persi),
 
-    ok = persi:add_connection(asdf, [{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
-    {error, eexist} = persi:add_connection(asdf, [{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
+    ok = persi:add_connection(asdf, persi_driver_esqlite, [{dbfile, ?DBFILE}]),
+    {error, eexist} = persi:add_connection(asdf, persi_driver_esqlite, [{dbfile, ?DBFILE}]),
 
     ok = persi:remove_connection(asdf),
 
-    ok = persi:add_connection(asdf, [{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
+    ok = persi:add_connection(asdf, persi_driver_esqlite, [{dbfile, ?DBFILE}]),
 
     ok = persi:remove_connection(asdf),
     ok.

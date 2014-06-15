@@ -18,15 +18,13 @@
 
 -module(persi).
 
--define(DEFAULT_CONNECTION, default).
-
--include_lib("persi.hrl").
+-include_lib("persi/include/persi.hrl").
 
 -export(
    [
     %% persi_connection wrappers
-    add_connection/1,
     add_connection/2,
+    add_connection/3,
     remove_connection/0,
     remove_connection/1,
 
@@ -56,11 +54,7 @@
     drop_column/2,
     drop_column/3,
     manage_schema/1,
-    manage_schema/2,
-
-    %% persi_query wrappers, provide raw database access
-    fetchall/2,
-    fetchall/3
+    manage_schema/2
    ]).
 
 %% Types start here
@@ -112,17 +106,17 @@
 -type column_names() :: list(atom()).
 
 %%% CONNECTION %%%
--spec add_connection(connection_opts()) -> ok | {error, eexist}.
-add_connection(Opts) ->
-    add_connection(?DEFAULT_CONNECTION, Opts).
+-spec add_connection(module(), connection_opts()) -> ok | {error, eexist}.
+add_connection(DriverModule, Opts) ->
+    add_connection(?PERSI_DEFAULT_CONNECTION, DriverModule, Opts).
 
--spec add_connection(connection(), connection_opts()) -> ok | {error, eexist}.
-add_connection(Conn, Opts) ->
-    persi_connection:add(Conn, Opts).
+-spec add_connection(connection(), module(), connection_opts()) -> ok | {error, eexist}.
+add_connection(Conn, DriverModule, Opts) ->
+    persi_connection:add(Conn, DriverModule, Opts).
 
 -spec remove_connection() -> ok | {error, enotfound}.
 remove_connection() ->
-    remove_connection(?DEFAULT_CONNECTION).
+    remove_connection(?PERSI_DEFAULT_CONNECTION).
 
 -spec remove_connection(connection()) -> ok | {error, enotfound}.
 remove_connection(Conn) ->
@@ -133,7 +127,7 @@ remove_connection(Conn) ->
 
 -spec insert(table(), row()) -> ok | error().
 insert(Table, Data) ->
-    insert(Table, Data, ?DEFAULT_CONNECTION).
+    insert(Table, Data, ?PERSI_DEFAULT_CONNECTION).
 
 -spec insert(table(), row(), connection()) -> ok | error().
 insert(Table, Data, Conn) ->
@@ -142,7 +136,7 @@ insert(Table, Data, Conn) ->
 
 -spec update(table(), id(), row()) -> {ok, non_neg_integer()} | error().
 update(Table, Id, Data) ->
-    update(Table, Id, Data, ?DEFAULT_CONNECTION).
+    update(Table, Id, Data, ?PERSI_DEFAULT_CONNECTION).
 
 -spec update(table(), id(), row(), connection()) -> {ok, non_neg_integer()} | error().
 update(Table, Id, Data, Conn) ->
@@ -151,7 +145,7 @@ update(Table, Id, Data, Conn) ->
 
 -spec upsert(table(), id(), row()) -> {ok, non_neg_integer()} | error().
 upsert(Table, Id, Data) ->
-    upsert(Table, Id, Data, ?DEFAULT_CONNECTION).
+    upsert(Table, Id, Data, ?PERSI_DEFAULT_CONNECTION).
 
 -spec upsert(table(), id(), row(), connection()) -> {ok, non_neg_integer()} | error().
 upsert(Table, Id, Data, Conn) ->
@@ -160,7 +154,7 @@ upsert(Table, Id, Data, Conn) ->
 
 -spec delete(table(), id()) -> {ok, non_neg_integer()} | error().
 delete(Table, Id) ->
-    delete(Table, Id, ?DEFAULT_CONNECTION).
+    delete(Table, Id, ?PERSI_DEFAULT_CONNECTION).
 
 -spec delete(table(), id(), connection()) -> {ok, non_neg_integer()} | error().
 delete(Table, Id, Conn) ->
@@ -169,7 +163,7 @@ delete(Table, Id, Conn) ->
 
 -spec select(table(), id()) -> {ok, row()} | error().
 select(Table, Id) ->
-    select(Table, Id, ?DEFAULT_CONNECTION).
+    select(Table, Id, ?PERSI_DEFAULT_CONNECTION).
 
 -spec select(table(), id(), connection()) -> {ok, row()} | error().
 select(Table, Id, Conn) ->
@@ -180,7 +174,7 @@ select(Table, Id, Conn) ->
 
 -spec schema_info() -> #persi_schema{}.
 schema_info() ->
-    schema_info(?DEFAULT_CONNECTION).
+    schema_info(?PERSI_DEFAULT_CONNECTION).
 
 -spec schema_info(connection()) -> schema_info().
 schema_info(Conn) ->
@@ -189,7 +183,7 @@ schema_info(Conn) ->
 
 -spec table_info(table()) -> {ok, table_info()} | {error, enotfound}.
 table_info(Table) ->
-    table_info(Table, ?DEFAULT_CONNECTION).
+    table_info(Table, ?PERSI_DEFAULT_CONNECTION).
 
 -spec table_info(table(), connection()) -> {ok, table_info()} | {error, enotfound}.
 table_info(Table, Conn) ->
@@ -198,7 +192,7 @@ table_info(Table, Conn) ->
 
 -spec create_table(table_info()) -> ok | {error, eexist}.
 create_table(Table) ->
-    create_table(Table, ?DEFAULT_CONNECTION).
+    create_table(Table, ?PERSI_DEFAULT_CONNECTION).
 
 -spec create_table(table_info(), connection()) -> ok | {error, eexist}.
 create_table(Table, Conn) ->
@@ -206,7 +200,7 @@ create_table(Table, Conn) ->
 
 -spec drop_table(table()) -> ok | {error, enotfound}.
 drop_table(Table) ->
-    drop_table(Table, ?DEFAULT_CONNECTION).
+    drop_table(Table, ?PERSI_DEFAULT_CONNECTION).
 
 -spec drop_table(table(), connection()) -> ok | {error, enotfound}.
 drop_table(Table, Conn) ->
@@ -214,7 +208,7 @@ drop_table(Table, Conn) ->
 
 -spec add_column(table(), column_info()) -> ok | {error, enotfound}.
 add_column(Table, Column) ->
-    add_column(Table, Column, ?DEFAULT_CONNECTION).
+    add_column(Table, Column, ?PERSI_DEFAULT_CONNECTION).
 
 -spec add_column(table(), #persi_column{}, connection()) -> ok | {error, enotfound}.
 add_column(Table, Column, Conn) ->
@@ -222,7 +216,7 @@ add_column(Table, Column, Conn) ->
 
 -spec drop_column(table(), atom()) -> ok | {error, enotfound}.
 drop_column(Table, ColumnName) ->
-    drop_column(Table, ColumnName, ?DEFAULT_CONNECTION).
+    drop_column(Table, ColumnName, ?PERSI_DEFAULT_CONNECTION).
 
 -spec drop_column(table(), atom(), connection()) -> ok | {error, enotfound}.
 drop_column(Table, ColumnName, Conn) ->
@@ -231,18 +225,9 @@ drop_column(Table, ColumnName, Conn) ->
 
 -spec manage_schema(module()) -> manage_result().
 manage_schema(Module) ->
-    manage_schema(Module, ?DEFAULT_CONNECTION).
+    manage_schema(Module, ?PERSI_DEFAULT_CONNECTION).
 
 -spec manage_schema(module(), connection()) -> manage_result().
 manage_schema(Module, Conn) ->
     persi_schema:manage(Module, Conn).
-
-
--spec fetchall(sql(), sql_args()) -> {ok, {sql_result(), column_names(), non_neg_integer()}} | error().
-fetchall(Sql, Args) ->
-    fetchall(Sql, Args, ?DEFAULT_CONNECTION).
-
--spec fetchall(sql(), sql_args(), connection()) -> {ok, {sql_result(), column_names(), non_neg_integer()}} | error().
-fetchall(Sql, Args, Conn) ->
-    persi_query:fetchall(Sql, Args, Conn).
 

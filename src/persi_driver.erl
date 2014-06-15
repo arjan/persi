@@ -40,13 +40,11 @@
     {ok, {persi:sql_result(), persi:column_names(), non_neg_integer()}} | persi:error().
 
 
--export([start_driver/2, reg/1]).
+-export([start_driver/3, reg/1]).
 
--spec start_driver(persi:connection(), persi:connection_opts()) -> {ok, pid()}.
-start_driver(Id, Opts) ->
-    {driver, DriverModule} = proplists:lookup(driver, Opts),
-    Opts1 = proplists:delete(driver, Opts),
-    gen_server:start_link({via, gproc, {n, l, {persi_driver, Id}}}, DriverModule, {Id, Opts1}, []).
+-spec start_driver(persi:connection(), module(), persi:connection_opts()) -> {ok, pid()}.
+start_driver(Id, DriverModule, Opts) ->
+    gen_server:start_link({via, gproc, {n, l, {persi_driver, Id}}}, DriverModule, {Id, Opts}, []).
 
 
 %% @doc MUST be called from the driver that is registering itself

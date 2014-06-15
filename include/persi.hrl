@@ -29,3 +29,5 @@
 
 -define(persi_props_column_name, props).
 -define(persi_props_column, #persi_column{name=?persi_props_column_name, type=blob, notnull=true}).
+
+-define(PERSI_DEFAULT_CONNECTION, default).

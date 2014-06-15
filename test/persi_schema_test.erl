@@ -29,7 +29,7 @@
 schema_info_test() ->
     application:start(gproc),
     application:start(persi),
-    persi:add_connection([{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
+    persi:add_connection(persi_driver_esqlite, [{dbfile, ?DBFILE}]),
     #persi_schema{} = persi:schema_info(),
     persi:remove_connection(),
     ok.
@@ -37,7 +37,7 @@ schema_info_test() ->
 table_info_test() ->
     application:start(gproc),
     application:start(persi),
-    persi:add_connection([{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
+    persi:add_connection(persi_driver_esqlite, [{dbfile, ?DBFILE}]),
     {error, enotfound} = persi:table_info(fjdlkfjdslkfjdslkfjdslkjflkds),
     persi:remove_connection(),
     ok.

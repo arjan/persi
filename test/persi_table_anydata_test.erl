@@ -93,13 +93,16 @@ upsert_test() ->
     teardown().
 
 
+%% A legacy system used to have the 'props' column encoded as a
+%% jiffy-compatible proplist, e.g. a {proplist()}. These tests make
+%% sure that data format is still supported.
 legacy_test() ->
     setup(),
     demotable(),
     
-    %% insert legacy data
-    persi:fetchall("INSERT INTO demotable (id, props) VALUES (?, ?)",
-                   [444, term_to_binary( {[{foo, bar}]} )]),
+    %% insert some legacy data
+    persi_query:fetchall("INSERT INTO demotable (id, props) VALUES (?, ?)",
+                         [444, term_to_binary( {[{foo, bar}]} )]),
 
     {ok, Row1} = persi:select(demotable, [{id, 444}]),
     

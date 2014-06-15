@@ -112,20 +112,20 @@ manage(SchemaModule, Connection) ->
             nop
     end,
     Version = SchemaModule:schema_version(),
-    {ok, SchemaResult} = persi:fetchall(<<"SELECT version FROM schema_version WHERE schema_module = ?">>, [SchemaModule], Connection),
+    {ok, SchemaResult} = persi_query:fetchall(<<"SELECT version FROM schema_version WHERE schema_module = ?">>, [SchemaModule], Connection),
     case SchemaResult of
         {[], _, _} ->
             %% install
             ok = SchemaModule:manage(install, Connection),
             %% insert version
-            persi:fetchall(<<"INSERT INTO schema_version (schema_module, version) VALUES (?, ?)">>, [SchemaModule, Version], Connection),
+            persi_query:fetchall(<<"INSERT INTO schema_version (schema_module, version) VALUES (?, ?)">>, [SchemaModule, Version], Connection),
             install;
         {[[Version]], _, _} ->
             noop;
         {[[OlderVersion]], _, _} when OlderVersion < Version ->
             Upgrades = lists:seq(OlderVersion+1, Version),
             [ok = SchemaModule:manage({upgrade, V}, Connection) || V <- Upgrades],
-            persi:fetchall(<<"UPDATE schema_version SET version = ? WHERE schema_module = ?">>, [Version, SchemaModule], Connection),
+            persi_query:fetchall(<<"UPDATE schema_version SET version = ? WHERE schema_module = ?">>, [Version, SchemaModule], Connection),
             {upgrade, Version};
         {[[_]], _, _} ->
             throw({error, schema_downgrade})
