@@ -116,3 +116,25 @@ legacy_test() ->
     bar = proplists:get_value(foo, Row2),
 
     teardown().
+
+column_migrate_test() ->
+    setup(),
+    demotable(),
+    
+    {ok, T1} = persi:table_info(demotable),
+    true = T1#persi_table.has_props,
+
+    %% here, 'name' is stored in the props column
+    ok = persi:insert(demotable, [{id, 123}, {name, <<"Foo">>}]),
+
+    %% add_column will automatically move the 'name' property into its own column
+    persi:add_column(demotable, #persi_column{name=name, type="varchar(255)"}),
+
+    %% check that the data is now in the column
+    {ok, {[[123, <<"Foo">>]], _, _}} = persi_query:fetchall(<<"SELECT id, name FROM demotable">>, []),
+
+    %% check that the props are now empty
+    {ok, {[[Empty]], _, _}} = persi_query:fetchall(<<"SELECT props FROM demotable">>, []),
+    [] = binary_to_term(Empty),
+
+    teardown().

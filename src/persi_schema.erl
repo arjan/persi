@@ -76,10 +76,16 @@ drop_table(TableName, Connection) when is_atom(TableName) ->
 -spec add_column(persi:table(), persi:column_info(), persi:connection()) -> ok | {error, enotfound}.
 add_column(TableName, ColumnDef, Connection) ->
     case table_info(TableName, Connection) of
-        {ok, #persi_table{}} ->
+        {ok, #persi_table{has_props=HasProps}} ->
             Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
             ok = Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" ADD COLUMN ">>,
                            create_column_sql(ColumnDef)], Driver),
+            case HasProps of
+                true ->
+                    migrate_from_props(TableName, ColumnDef#persi_column.name, Driver);
+                false ->
+                    nop
+            end,
             ok = Mod:flush_metadata(Driver);
         {error, enotfound} ->
             {error, enotfound}
@@ -88,8 +94,14 @@ add_column(TableName, ColumnDef, Connection) ->
 -spec drop_column(persi:table(), atom(), persi:connection()) -> ok | {error, enotfound}.
 drop_column(TableName, ColumnName, Connection) ->
     case table_info(TableName, Connection) of
-        {ok, #persi_table{}} ->
+        {ok, #persi_table{has_props=HasProps}} ->
             Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+            case HasProps of
+                true ->
+                    migrate_to_props(TableName, ColumnName, Driver);
+                false ->
+                    nop
+            end,
             ok = Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" DROP COLUMN ">>,
                            atom_to_list(ColumnName)], Driver),
             ok = Mod:flush_metadata(Driver);
@@ -175,3 +187,45 @@ primary_key_sql(Cols) ->
 foreign_key_sql(#persi_fk{table=Table, from=From, to=To}) ->
     ["FOREIGN KEY (", atom_to_list(From) ,") REFERENCES ", atom_to_list(Table), "(", atom_to_list(To), ")"].
 
+
+
+%% @doc Get a value from the props and put it in its own column (as a first-class citizen of the table)
+%% FIXME wrap this in a single transaction instead of making separate calls to the driver
+migrate_from_props(TableName, ColumnName, #persi_driver{module=Mod}=Driver) ->
+    Mod:exec("BEGIN", Driver),
+    {ok, {All, _, _}} = Mod:fetchall(["SELECT id, props FROM ", atom_to_list(TableName)], [], Driver),
+    [begin
+         Props = binary_to_term(PropsBin),
+         case proplists:lookup(ColumnName, Props) of
+             none ->
+                 skip;
+             {_, V} -> 
+                 Mod:fetchall(["UPDATE ", atom_to_list(TableName), " SET ",
+                               atom_to_list(ColumnName), " = ?, props = ? WHERE id = ?"],
+                              [V, term_to_binary(proplists:delete(ColumnName, Props)), Id],
+                              Driver)
+         end
+     end || [Id, PropsBin] <- All
+    ],
+    ok = Mod:exec("COMMIT", Driver),
+    {ok, length(All)}.
+
+migrate_to_props(TableName, ColumnName, #persi_driver{module=Mod}=Driver) ->
+    Mod:exec("BEGIN", Driver),
+    {ok, {All, _, _}} = Mod:fetchall(["SELECT id, ", atom_to_list(ColumnName), ", props FROM ", atom_to_list(TableName)], [], Driver),
+    [begin
+         case Value of
+             undefined ->
+                 skip;
+             _ -> 
+                 Props = binary_to_term(PropsBin),
+                 NewProps = [{ColumnName, Value} | proplists:delete(ColumnName, Props)],
+                 Mod:fetchall(["UPDATE ", atom_to_list(TableName),
+                               " SET props = ? WHERE id = ?"],
+                              [term_to_binary(NewProps), Id],
+                              Driver)
+         end
+     end || [Id, Value, PropsBin] <- All
+    ],
+    ok = Mod:exec("COMMIT", Driver),
+    {ok, length(All)}.
