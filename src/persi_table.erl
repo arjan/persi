@@ -53,7 +53,7 @@ insert(TableName, Row0, Connection) when is_atom(TableName) ->
 
     Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
     case Mod:fetchall(Sql, Args, Driver) of
-        {ok, {[{1}], _, _}} ->
+        {ok, {[[1]], _, _}} ->
             ok;
         {error, _} = E ->
             E
@@ -75,9 +75,9 @@ update(TableName, Selection, Row0, Connection) when is_atom(TableName) ->
 
     Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
     case Mod:fetchall(Sql, Vs ++ WhereArgs, Driver) of
-        {ok, {[{0}], _, _}} ->
+        {ok, {[[0]], _, _}} ->
             {error, enotfound};
-        {ok, {[{Nr}], _, _}} ->
+        {ok, {[[Nr]], _, _}} ->
             {ok, Nr};
         {error, _} = E ->
             E
@@ -169,7 +169,7 @@ opt_fold_props(#persi_table{has_props=true, columns=Columns, name=TableName}, Ro
                     case Mod:fetchall(Sql, WhereArgs, Driver) of
                         {ok, {[], _, _}} ->
                             Props0;
-                        {ok, {[{ExistingPropsBin}], _, _}} ->
+                        {ok, {[[ExistingPropsBin]], _, _}} ->
                             merge_props(Props0, binary_to_term(ExistingPropsBin))
                     end
             end,
@@ -177,7 +177,7 @@ opt_fold_props(#persi_table{has_props=true, columns=Columns, name=TableName}, Ro
 
             
 values_to_row(Values, Columns, TableInfo) ->
-    Row = lists:zip(tuple_to_list(Columns), tuple_to_list(Values)),
+    Row = lists:zip(Columns, Values),
     case TableInfo#persi_table.has_props of
         false ->
             Row;

@@ -110,9 +110,9 @@ unknown_column_test() ->
     
     {error, enotfound} = persi:select(demotable, 123),
 
-    {error, {sqlite_error, _}} = persi:select(demotable, [{xxxid, 123}]),
-    {error, {sqlite_error, _}} = persi:insert(demotable, [{id, 123}, {name, <<"Foo">>}, {meh, moeder}]),
-    {error, {sqlite_error, _}} = persi:update(demotable, 123, [{name, <<"Foo">>}, {meh, moeder}]),
-    {error, {sqlite_error, _}} = persi:upsert(demotable, 123, [{name, <<"Foo">>}, {meh, moeder}]),
+    {error, _} = persi:select(demotable, [{xxxid, 123}]),
+    {error, _} = persi:insert(demotable, [{id, 123}, {name, <<"Foo">>}, {meh, moeder}]),
+    {error, _} = persi:update(demotable, 123, [{name, <<"Foo">>}, {meh, moeder}]),
+    {error, _} = persi:upsert(demotable, 123, [{name, <<"Foo">>}, {meh, moeder}]),
     
     teardown().

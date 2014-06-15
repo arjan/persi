@@ -13,3 +13,8 @@ notifications:
       - scherpenisse@gmail.com
     on_success: change #[always|never|change] # default: change
     on_failure: always #[always|never|change] # default: always
+before_script:
+  - mysql -e 'create database persi_test;'
+env:
+  - PERSI_DBDRIVER=sqlite
+  - PERSI_DBDRIVER=mysql

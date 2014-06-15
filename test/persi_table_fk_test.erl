@@ -58,13 +58,13 @@ full_test() ->
     <<"Michael Jackson">> = proplists:get_value(name, Row),
 
     %% name may not be null
-    {error, {constraint, _}} = persi:insert(track, [{id, 1}]), 
+    {error, _} = persi:insert(track, [{id, 1}]), 
 
     %% artist id may not be null
-    {error, {constraint, _}} = persi:insert(track, [{id, 1}, {name, <<"Heal the World">>}]),
+    {error, _} = persi:insert(track, [{id, 1}, {name, <<"Heal the World">>}]),
 
     %% unknown artist id
-    {error, {constraint, _}} = persi:insert(track, [{id, 1}, {artist_id, 666}, {name, <<"Heal the World">>}]),
+    {error, _} = persi:insert(track, [{id, 1}, {artist_id, 666}, {name, <<"Heal the World">>}]),
   
     ok = persi:insert(track, [{id, 1}, {artist_id, 1}, {name, <<"Heal the World">>}]),
   

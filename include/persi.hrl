@@ -28,4 +28,4 @@
 -record(persi_fk, {table, from, to}).
 
 -define(persi_props_column_name, props).
--define(persi_props_column, #persi_column{name=?persi_props_column_name, type=blob, default=term_to_binary([]), notnull=true}).
+-define(persi_props_column, #persi_column{name=?persi_props_column_name, type=blob, notnull=true}).

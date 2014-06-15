@@ -1,6 +1,6 @@
 %% @author Arjan Scherpenisse <arjan@miraclethings.nl>
 %% @copyright 2014 Arjan Scherpenisse
-%% @doc MySQL driver
+%% @doc MySQL driver based on Eonblast's emysql application
 
 %% Copyright 2014 Arjan Scherpenisse
 %%
@@ -63,9 +63,22 @@ exec(Sql, #persi_driver{id=Id}) ->
 flush_metadata(#persi_driver{pid=Pid}) ->
     gen_server:call(Pid, flush_metadata).
 
-fetchall(Sql, Args, Pid) when is_pid(Pid) ->
-    %%io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
-    gen_server:call(Pid, {fetchall, iolist_to_binary(Sql), Args}).
+fetchall(Sql, Args, #persi_driver{id=Id}) ->
+    Stmt = ?MODULE,
+    try
+        emysql:prepare(Stmt, iolist_to_binary(Sql)),
+        case emysql:execute(Id, Stmt, Args) of
+            #ok_packet{affected_rows=Rows} ->
+                {ok, {[[Rows]], [], Rows}};
+            #result_packet{rows=Rows, field_list=Fields} ->
+                {ok, {Rows, [binary_to_atom(F#field.name, utf8) || F <- Fields], 0}};
+            #error_packet{msg=Msg, status=Status} ->
+                {error, {emysql, Status, Msg}}
+        end
+    catch
+        exit:{{failed_to_prepare_statement, Msg1}, _} ->
+            {error, {emysql, Msg1}}
+    end.
 
 
 %%====================================================================
@@ -99,23 +112,6 @@ handle_call({table_info, Table}, _From, State=#state{metadata=Metadata}) ->
             end,
     {reply, Reply, State};
 
-handle_call({fetchall, Sql, Args}, _From, State) ->
-    %% Result = case esqlite3:prepare(iolist_to_binary(Sql), State#state.db) of
-    %%              {ok, Stmt} ->
-    %%                  ok = esqlite3:bind(Stmt, Args),
-    %%                  case esqlite3:fetchall(Stmt) of
-    %%                      Ret when is_list(Ret) ->
-    %%                          {ok, NumRows} = esqlite3:changes(State#state.db),
-    %%                          {ok, {Ret, esqlite3:column_names(Stmt), NumRows}};
-    %%                      {error, _} = E ->
-    %%                          E
-    %%                  end;
-    %%              {error, _} = E ->
-    %%                  E
-    %%          end,
-    Result=0,
-    {reply, Result, State};
-
 handle_call(flush_metadata, _From, State) ->
     {reply, ok, State#state{metadata=do_schema_info(State#state.id)}};
 
@@ -132,7 +128,7 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 %% @doc This function is called by a gen_server when it is about to terminate.
-terminate(_Reason, State) ->
+terminate(_Reason, _State) ->
     ok.
 
 %% @doc Convert process state when code is changed
@@ -160,7 +156,7 @@ do_list_tables(Id) ->
 do_table_info(TableName, Id) ->
     Sql = iolist_to_binary([<<"DESC ">>, erlang:atom_to_binary(TableName, utf8)]),
     R = emysql:execute(Id, Sql),
-    
+
     WithPK = lists:map(fun([ColumnName, ColumnType, Null, Key, Default, _Extra]) -> 
                                {#persi_column{name=erlang:binary_to_atom(ColumnName, utf8),
                                               type=ColumnType,
@@ -176,9 +172,6 @@ do_table_info(TableName, Id) ->
                                {C, {Acc, HasProps orelse Name =:= ?persi_props_column_name}} end,
                        {[], false},
                        WithPK),
-
-    io:format(user, "~p~n", [Cols]),
-    io:format(user, "~p~n", [PKs]),
 
     Sql1 = [<<"SELECT column_name, referenced_table_name, referenced_column_name FROM information_schema.key_column_usage WHERE table_name = '">>, erlang:atom_to_binary(TableName, utf8), <<"' AND referenced_table_name IS NOT NULL">>],
     R1 = emysql:execute(Id, iolist_to_binary(Sql1)),

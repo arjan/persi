@@ -110,7 +110,7 @@ handle_call({fetchall, Sql, Args}, _From, State) ->
                      case esqlite3:fetchall(Stmt) of
                          Ret when is_list(Ret) ->
                              {ok, NumRows} = esqlite3:changes(State#state.db),
-                             {ok, {Ret, esqlite3:column_names(Stmt), NumRows}};
+                             {ok, {[tuple_to_list(R) || R <- Ret], tuple_to_list(esqlite3:column_names(Stmt)), NumRows}};
                          {error, _} = E ->
                              E
                      end;

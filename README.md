@@ -10,25 +10,28 @@ Design goals
 ------------
 
 * Simple, easy to learn API
+* Support multiple database backends
 * API is purely functional, it is not an ORM.
 * Database schema versioning and migrations
 * Aiming for 100% test coverage
-* No result caching - caching should be done in application code
 * Aiming for 100% test coverage
 * 100% typespec (dialyzer)
 
+
 Features
 --------
+* SQLite support
+* MySQL support (with emysql builtin connection pool)
 * Metadata caching (table / schema info) in driver layer
 * Optionally allow for arbitrary key / values in tables (serialized in a blob column)
 * Support for foreign key constraints
+* No result caching - caching should be done in application code
 
 
 To do list
 ----------
+* PostgreSQL support
 * Data migration from / to props column when adding/dropping columns
-* Implement multiple database backends (currently only SQLite)
-* Connection pooling (for applicable backends)
 
 
 Naming
