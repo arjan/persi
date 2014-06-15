@@ -19,6 +19,7 @@
 -module(persi_table).
 
 -include_lib("persi.hrl").
+-include("persi_int.hrl").
 
 -export(
    [
@@ -50,8 +51,8 @@ insert(TableName, Row0, Connection) when is_atom(TableName) ->
            persi_util:iolist_join([$? || _ <- lists:seq(1, length(Cols))], $,),
            ")"],
 
-    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
-    case Mod:fetchall(Sql, Args, Pid) of
+    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+    case Mod:fetchall(Sql, Args, Driver) of
         {ok, {[{1}], _, _}} ->
             ok;
         {error, _} = E ->
@@ -72,8 +73,8 @@ update(TableName, Selection, Row0, Connection) when is_atom(TableName) ->
     {Where, WhereArgs} = selection_where(Selection),
     Sql = [<<"UPDATE ">>, atom_to_list(TableName), " SET ", Sets, " WHERE ", Where],
 
-    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
-    case Mod:fetchall(Sql, Vs ++ WhereArgs, Pid) of
+    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+    case Mod:fetchall(Sql, Vs ++ WhereArgs, Driver) of
         {ok, {[{0}], _, _}} ->
             {error, enotfound};
         {ok, {[{Nr}], _, _}} ->
@@ -96,11 +97,11 @@ upsert(TableName, Selection, Row, Connection) when is_atom(TableName) ->
 
 -spec delete(persi:table(), persi:selection(), persi:connection()) -> {ok, non_neg_integer()} | persi:error().
 delete(TableName, Selection, Connection) when is_atom(TableName) ->
-    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
+    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
 
     {Where, Args} = selection_where(Selection),
     Sql = [<<"DELETE FROM ">>, atom_to_list(TableName), " WHERE ", Where],
-    case Mod:fetchall(Sql, Args, Pid) of
+    case Mod:fetchall(Sql, Args, Driver) of
         {ok, {_, _, 0}} ->
             {error, enotfound};
         {ok, {_, _, Nr}} ->
@@ -112,12 +113,11 @@ delete(TableName, Selection, Connection) when is_atom(TableName) ->
 -spec select(persi:table(), persi:selection(), persi:connection()) -> {ok, persi:row()} | persi:error().
 select(TableName, Selection, Connection) when is_atom(TableName) ->
 
-    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
-
     {Where, Args} = selection_where(Selection),
     Sql = [<<"SELECT * FROM ">>, atom_to_list(TableName), " WHERE ", Where, " LIMIT 1"],
 
-    case Mod:fetchall(Sql, Args, Pid) of
+    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+    case Mod:fetchall(Sql, Args, Driver) of
         {ok, {[], _, _}} ->
             {error, enotfound};
         {ok, {[Values], Columns, _}} ->
@@ -165,8 +165,8 @@ opt_fold_props(#persi_table{has_props=true, columns=Columns, name=TableName}, Ro
                     {Where, WhereArgs} = selection_where(PK),
                     Sql = [<<"SELECT ">>, atom_to_list(?persi_props_column_name), <<" FROM ">>, atom_to_list(TableName), " WHERE ", Where],
 
-                    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
-                    case Mod:fetchall(Sql, WhereArgs, Pid) of
+                    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+                    case Mod:fetchall(Sql, WhereArgs, Driver) of
                         {ok, {[], _, _}} ->
                             Props0;
                         {ok, {[{ExistingPropsBin}], _, _}} ->

@@ -38,26 +38,26 @@
    ]).
 
 -include_lib("persi/include/persi.hrl").
+-include_lib("persi_int.hrl").
 
 -spec info(persi:connection()) -> persi:schema_info().
 info(Connection) ->
-    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
-    Mod:schema_info(Pid).
+    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+    Mod:schema_info(Driver).
 
 -spec table_info(persi:table(), persi:connection()) -> {ok, persi:table_info()} | {error, enotfound}.
 table_info(TableName, Connection) ->
-    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
-    Mod:table_info(TableName,Pid).
-
+    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+    Mod:table_info(TableName, Driver).
 
 -spec create_table(persi:table_info(), persi:connection()) -> ok | {error, eexist}.
 create_table(TableDef, Connection) ->
     case table_info(TableDef#persi_table.name, Connection) of
         {error, enotfound} ->
-            {Mod, Pid} = persi_connection:driver_and_pid(Connection),
+            Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
             SQL = create_table_sql(TableDef),
-            ok = Mod:exec(SQL, Pid),
-            ok = Mod:flush_metadata(Pid);
+            ok = Mod:exec(SQL, Driver),
+            ok = Mod:flush_metadata(Driver);
         {ok, #persi_table{}} ->
             {error, eexist}
     end.
@@ -66,9 +66,9 @@ create_table(TableDef, Connection) ->
 drop_table(TableName, Connection) when is_atom(TableName) ->
     case table_info(TableName, Connection) of
         {ok, #persi_table{}} ->
-            {Mod, Pid} = persi_connection:driver_and_pid(Connection),
-            ok = Mod:exec([<<"DROP TABLE ">>, atom_to_list(TableName)], Pid),
-            ok = Mod:flush_metadata(Pid);
+            Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+            ok = Mod:exec([<<"DROP TABLE ">>, atom_to_list(TableName)], Driver),
+            ok = Mod:flush_metadata(Driver);
         {error, enotfound} ->
             {error, enotfound}
     end.
@@ -77,10 +77,10 @@ drop_table(TableName, Connection) when is_atom(TableName) ->
 add_column(TableName, ColumnDef, Connection) ->
     case table_info(TableName, Connection) of
         {ok, #persi_table{}} ->
-            {Mod, Pid} = persi_connection:driver_and_pid(Connection),
+            Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
             ok = Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" ADD COLUMN ">>,
-                           create_column_sql(ColumnDef)], Pid),
-            ok = Mod:flush_metadata(Pid);
+                           create_column_sql(ColumnDef)], Driver),
+            ok = Mod:flush_metadata(Driver);
         {error, enotfound} ->
             {error, enotfound}
     end.
@@ -89,10 +89,10 @@ add_column(TableName, ColumnDef, Connection) ->
 drop_column(TableName, ColumnName, Connection) ->
     case table_info(TableName, Connection) of
         {ok, #persi_table{}} ->
-            {Mod, Pid} = persi_connection:driver_and_pid(Connection),
+            Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
             ok = Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" DROP COLUMN ">>,
-                           atom_to_list(ColumnName)], Pid),
-            ok = Mod:flush_metadata(Pid);
+                           atom_to_list(ColumnName)], Driver),
+            ok = Mod:flush_metadata(Driver);
         {error, enotfound} ->
             {error, enotfound}
     end.

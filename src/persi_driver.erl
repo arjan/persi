@@ -18,23 +18,25 @@
 
 -module(persi_driver).
 
+-include("persi_int.hrl").
+
 %% @doc Return metadata information about the entire database
--callback schema_info(pid()) ->
+-callback schema_info(#persi_driver{}) ->
     persi:schema_info().
 
 %% @doc Return metadata information about the table
--callback table_info(persi:table(), pid()) ->
+-callback table_info(persi:table(), #persi_driver{}) ->
     {ok, persi:table_info()} | {error, enotfound}.
 
 %% @doc Execute a plain SQL query
--callback exec(persi:sql(), pid()) ->
+-callback exec(persi:sql(), #persi_driver{}) ->
     ok | {ok, RowsAffected :: non_neg_integer()}.
 
 %% @doc Flush any cached metadata in the driver process (called after a schema change)
--callback flush_metadata(pid()) -> ok.
+-callback flush_metadata(#persi_driver{}) -> ok.
 
 %% @doc Full query, returns all rows plus column information
--callback fetchall(persi:sql(), persi:sql_args(), pid()) -> {persi:sql_result(), persi:column_names(), non_neg_integer()}.
+-callback fetchall(persi:sql(), persi:sql_args(), #persi_driver{}) -> {persi:sql_result(), persi:column_names(), non_neg_integer()}.
 
 
 -export([start_driver/2, reg/1]).
@@ -42,7 +44,7 @@
 -spec start_driver(persi:connection(), persi:connection_opts()) -> {ok, pid()}.
 start_driver(Id, Opts) ->
     {driver, DriverModule} = proplists:lookup(driver, Opts),
-    gen_server:start_link({via, gproc, {n, l, {persi_driver, Id}}}, DriverModule, Opts, []).
+    gen_server:start_link({via, gproc, {n, l, {persi_driver, Id}}}, DriverModule, {Id, Opts}, []).
 
 
 %% @doc MUST be called from the driver that is registering itself

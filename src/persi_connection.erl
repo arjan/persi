@@ -22,38 +22,46 @@
    [
     add/2,
     remove/1,
-    driver_and_pid/1
+    lookup_driver/1
    ]).
+
+-include("persi_int.hrl").
 
 -spec add(persi:connection(), persi:connection_opts()) -> ok | {error, eexist}.
 add(Connection, Opts) when is_atom(Connection), is_list(Opts) ->
-    case is_pid(whereis_driver(Connection)) of
-        true ->
+    case lookup_driver_(Connection) of
+        #persi_driver{} ->
             {error, eexist};
-        false ->
+        undefined ->
             {ok, _Pid} = supervisor:start_child(persi_driver_sup, [Connection, Opts]),
             ok
     end.
 
 -spec remove(persi:connection()) -> ok | {error, enotfound}.
 remove(Connection) when is_atom(Connection) ->
-    case whereis_driver(Connection) of
+    case lookup_driver_(Connection) of
         undefined ->
             {error, enotfound};
-        Pid when is_pid(Pid) ->
+        #persi_driver{pid=Pid} ->
             ok = supervisor:terminate_child(persi_driver_sup, Pid)
     end.
 
-
-driver_and_pid(Connection) ->
-    case whereis_driver(Connection) of
+lookup_driver(Connection) ->
+    case lookup_driver_(Connection) of
         undefined ->
             throw({error, unknown_connection});
-        Pid ->
-            {gproc:get_value({p, l, persi_driver_mod}, Pid), Pid}
+        D ->
+            D
     end.
 
-whereis_driver(Connection) ->
-    gproc:whereis_name({n, l, {persi_driver, Connection}}).
+lookup_driver_(Connection) ->
+    case gproc:whereis_name({n, l, {persi_driver, Connection}}) of
+        undefined ->
+            undefined;
+        Pid ->
+            #persi_driver{id=Connection,
+                          module=gproc:get_value({p, l, persi_driver_mod}, Pid),
+                          pid=Pid}
+    end.
     
 

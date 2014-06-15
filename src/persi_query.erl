@@ -19,10 +19,11 @@
 -module(persi_query).
 
 -include_lib("persi/include/persi.hrl").
+-include("persi_int.hrl").
 
 -export([fetchall/3]).
 
 fetchall(Sql, Args, Connection) ->
-    {Mod, Pid} = persi_connection:driver_and_pid(Connection),
-    Mod:fetchall(Sql, Args, Pid).
+    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+    Mod:fetchall(Sql, Args, Driver).
 

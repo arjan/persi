@@ -22,8 +22,9 @@
 -behaviour(persi_driver).
 
 -include_lib("persi/include/persi.hrl").
+-include("persi_int.hrl").
 
--record(state, {db, metadata=undefined}).
+-record(state, {id, db, metadata=undefined}).
 
 %% gen_server exports
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -46,21 +47,21 @@
 %% API
 %%====================================================================
 
-schema_info(Pid) when is_pid(Pid) ->
+schema_info(#persi_driver{pid=Pid}) ->
     gen_server:call(Pid, schema_info).
 
-table_info(Table, Pid)  when is_atom(Table), is_pid(Pid) ->
+table_info(Table, #persi_driver{pid=Pid})  when is_atom(Table) ->
     gen_server:call(Pid, {table_info, Table}).
 
-exec(Sql, Pid) ->
-                                                %io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
+exec(Sql, #persi_driver{pid=Pid}) ->
+    %%io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
     gen_server:call(Pid, {exec, iolist_to_binary(Sql)}).
 
-flush_metadata(Pid) when is_pid(Pid) ->
+flush_metadata(#persi_driver{pid=Pid}) ->
     gen_server:call(Pid, flush_metadata).
 
-fetchall(Sql, Args, Pid) when is_pid(Pid) ->
-                                                %io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
+fetchall(Sql, Args, #persi_driver{pid=Pid}) ->
+    %%io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
     gen_server:call(Pid, {fetchall, iolist_to_binary(Sql), Args}).
 
 
@@ -69,7 +70,7 @@ fetchall(Sql, Args, Pid) when is_pid(Pid) ->
 %%====================================================================
 
 %% @doc Initiates the server.
-init(Args) ->
+init({Id, Args}) ->
     persi_driver:reg(?MODULE),
 
     {dbfile, DbFile} = proplists:lookup(dbfile, Args),
@@ -84,7 +85,7 @@ init(Args) ->
     %% Assert a lock on the db file, no 2 processes can open the same db file at once
 %%%Fixme? gproc:reg_shared({p,l,{esqlite_dbfile, DbFile}}),
 
-    {ok, #state{db=Db, metadata=do_schema_info(Db)}}.
+    {ok, #state{id=Id, db=Db, metadata=do_schema_info(Db)}}.
 
 
 handle_call(schema_info, _From, State=#state{metadata=Metadata}) ->
