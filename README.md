@@ -12,16 +12,21 @@ Design goals
 * Simple, easy to learn API
 * API is purely functional, it is not an ORM.
 * Database schema versioning and migrations
+* Aiming for 100% test coverage
 * No result caching - caching should be done in application code
+* Aiming for 100% test coverage
+
+
+Features
+--------
 * Metadata caching (table / schema info) in driver layer
-* Optionally allow for arbitrary data in tables (serialized in a blob column)
+* Optionally allow for arbitrary key / values in tables (serialized in a blob column)
+* Support for foreign key constraints
 
 
 To do list
 ----------
 * Data migration from / to props column when adding/dropping columns
-* Aiming for 100% test coverage
-* Foreign key tests
 * Implement multiple database backends (currently only SQLite)
 * Connection pooling (for applicable backends)
 

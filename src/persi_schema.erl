@@ -173,5 +173,5 @@ primary_key_sql(Cols) ->
     [["PRIMARY KEY (", persi_util:iolist_join(lists:map(fun atom_to_list/1, Cols), $,), ")"]].
 
 foreign_key_sql(#persi_fk{table=Table, from=From, to=To}) ->
-    ["FOREIGN KEY ", atom_to_list(From) ," REFERENCES ", atom_to_list(Table), "(", atom_to_list(To), ")"].
+    ["FOREIGN KEY (", atom_to_list(From) ,") REFERENCES ", atom_to_list(Table), "(", atom_to_list(To), ")"].
 

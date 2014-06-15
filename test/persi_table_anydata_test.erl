@@ -116,5 +116,8 @@ legacy_test() ->
     {ok, Row2} = persi:select(demotable, 444),
     <<"Bar">> = proplists:get_value(name, Row2),
     bar = proplists:get_value(foo, Row2),
+
+    application:stop(persi),
+    application:stop(gproc),
     
     ok.

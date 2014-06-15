@@ -23,6 +23,7 @@
 
 %% @doc Given a list of strings, create an iolist with the given separator.
 -spec iolist_join([iolist()], term()) -> iolist().
+iolist_join([], _) -> [];
 iolist_join([X], _) -> [X];
 iolist_join([First|Rest], Sep) ->
     lists:reverse(iolist_join(Rest, Sep, [First])).

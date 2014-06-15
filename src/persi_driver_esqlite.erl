@@ -22,7 +22,7 @@
 -behaviour(gen_server).
 
 -include_lib("persi/include/persi.hrl").
-   
+
 -record(state, {db, metadata=undefined}).
 
 %% gen_server exports
@@ -60,14 +60,14 @@ table_info(Table, Pid)  when is_atom(Table), is_pid(Pid) ->
     gen_server:call(Pid, {table_info, Table}).
 
 exec(Sql, Pid) ->
-    %io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
+                                                %io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
     gen_server:call(Pid, {exec, iolist_to_binary(Sql)}).
 
 flush_metadata(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, flush_metadata).
 
 fetchall(Sql, Args, Pid) when is_pid(Pid) ->
-    %io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
+                                                %io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
     gen_server:call(Pid, {fetchall, iolist_to_binary(Sql), Args}).
 
 
@@ -83,13 +83,13 @@ init(Args) ->
 
     %% Open the file
     {ok, Db} = esqlite3:open(DbFile),
-    
+
     %% Enable foreign key checks
     ok = esqlite3:exec(<<"PRAGMA foreign_keys=1;">>, Db),
     ok = esqlite3:exec(<<"PRAGMA count_changes=1;">>, Db),
 
     %% Assert a lock on the db file, no 2 processes can open the same db file at once
-    %%%Fixme? gproc:reg_shared({p,l,{esqlite_dbfile, DbFile}}),
+%%%Fixme? gproc:reg_shared({p,l,{esqlite_dbfile, DbFile}}),
 
     {ok, #state{db=Db, metadata=do_schema_info(Db)}}.
 
@@ -113,8 +113,13 @@ handle_call({fetchall, Sql, Args}, _From, State) ->
     Result = case esqlite3:prepare(iolist_to_binary(Sql), State#state.db) of
                  {ok, Stmt} ->
                      ok = esqlite3:bind(Stmt, Args),
-                     {ok, NumRows} = esqlite3:changes(State#state.db),
-                     {ok, {esqlite3:fetchall(Stmt), esqlite3:column_names(Stmt), NumRows}};
+                     case esqlite3:fetchall(Stmt) of
+                         Ret when is_list(Ret) ->
+                             {ok, NumRows} = esqlite3:changes(State#state.db),
+                             {ok, {Ret, esqlite3:column_names(Stmt), NumRows}};
+                         {error, _} = E ->
+                             E
+                     end;
                  {error, _} = E ->
                      E
              end,
@@ -181,16 +186,11 @@ do_table_info(TableName, Connection) ->
                                          from=erlang:binary_to_atom(From, utf8),
                                          to=erlang:binary_to_atom(To, utf8)}
                        end,
-                          [<<"PRAGMA foreign_key_list('">>, erlang:atom_to_binary(TableName, utf8), <<"');">>], Connection),
-    case Cols of
-        [] ->
-            {error, enotfound};
-        _ -> 
-            #persi_table{
-               name=TableName,
-               columns=Cols,
-               pk=PKs,
-               fks=FKs,
-               has_props=HasProps}
-    end.
+                       [<<"PRAGMA foreign_key_list('">>, erlang:atom_to_binary(TableName, utf8), <<"');">>], Connection),
+    #persi_table{
+       name=TableName,
+       columns=Cols,
+       pk=PKs,
+       fks=FKs,
+       has_props=HasProps}.
 

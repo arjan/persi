@@ -170,7 +170,9 @@ opt_fold_props(#persi_table{has_props=true, columns=Columns, name=TableName}, Ro
                         {ok, {[], _, _}} ->
                             Props0;
                         {ok, {[{ExistingPropsBin}], _, _}} ->
-                            merge_props(Props0, binary_to_term(ExistingPropsBin))
+                            merge_props(Props0, binary_to_term(ExistingPropsBin));
+                        {error, _} = E ->
+                            E
                     end
             end,
     [{?persi_props_column_name, term_to_binary(Props)} | ColData].
