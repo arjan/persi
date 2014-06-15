@@ -23,14 +23,9 @@
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("persi/include/persi.hrl").
 
--define(DBFILE, ":memory:").
+-include("persi_eunit.hrl").
 
-setup() ->
-    application:start(gproc),
-    application:start(persi),
-
-    ok = persi:add_connection([{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
-
+tables() ->
     persi:create_table(#persi_table{name=artist,
                                     columns=
                                         [
@@ -52,13 +47,10 @@ setup() ->
     
     ok.
 
-teardown() ->
-    application:stop(persi),
-    application:stop(gproc),
-    ok.
     
 full_test() ->
     setup(),
+    tables(),
     
     ok = persi:insert(artist, [{id, 1}, {name, <<"Michael Jackson">>}]),
 

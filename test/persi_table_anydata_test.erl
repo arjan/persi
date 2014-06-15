@@ -23,17 +23,12 @@
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("persi/include/persi.hrl").
 
--define(DBFILE, ":memory:").
+-include("persi_eunit.hrl").
 
 -define(complicated_term, [<<"foo fdfd fds fads fdsa fdsa fdsa fdsa fsdfdfdf">>, [{bar, baz, 12332, 232.222}]]).
 
 
-setup() ->
-    application:start(gproc),
-    application:start(persi),
-
-    ok = persi:add_connection([{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
-
+demotable() ->
     Table = #persi_table{name=demotable,
                          columns=
                              [
@@ -48,6 +43,7 @@ setup() ->
 
 full_test() ->
     setup(),
+    demotable(),
     
     {error, enotfound} = persi:select(demotable, 123),
     {error, enotfound} = persi:delete(demotable, 123),
@@ -71,13 +67,12 @@ full_test() ->
     {ok, 1} = persi:delete(demotable, 123),
     {error, enotfound} = persi:select(demotable, 123),
 
-    persi:remove_connection(),
-    
-    ok.
+    teardown().
 
 
 upsert_test() ->
     setup(),
+    demotable(),
     
     {ok, insert} = persi:upsert(demotable, 111, [{name, <<"Foo">>}]),
     {ok, insert} = persi:upsert(demotable, [{id, 33333}], [{name, <<"Another row">>}]),
@@ -95,12 +90,12 @@ upsert_test() ->
     
     {ok, 1} = persi:delete(demotable, 111),
 
-    persi:remove_connection(),
-    
-    ok.
+    teardown().
+
 
 legacy_test() ->
     setup(),
+    demotable(),
     
     %% insert legacy data
     persi:fetchall("INSERT INTO demotable (id, props) VALUES (?, ?)",
@@ -117,7 +112,4 @@ legacy_test() ->
     <<"Bar">> = proplists:get_value(name, Row2),
     bar = proplists:get_value(foo, Row2),
 
-    application:stop(persi),
-    application:stop(gproc),
-    
-    ok.
+    teardown().

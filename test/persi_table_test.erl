@@ -23,14 +23,9 @@
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("persi/include/persi.hrl").
 
--define(DBFILE, ":memory:").
+-include("persi_eunit.hrl").
 
-setup() ->
-    application:start(gproc),
-    application:start(persi),
-
-    ok = persi:add_connection([{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
-
+demotable() ->
     Table = #persi_table{name=demotable,
                          columns=
                              [
@@ -45,6 +40,7 @@ setup() ->
 
 full_test() ->
     setup(),
+    demotable(),
     
     {error, enotfound} = persi:select(demotable, 123),
     {error, enotfound} = persi:delete(demotable, 123),
@@ -63,14 +59,12 @@ full_test() ->
     {ok, 1} = persi:delete(demotable, 123),
     {error, enotfound} = persi:select(demotable, 123),
 
-    persi:remove_connection(),
-    
-    ok.
-
+    teardown().
 
 
 upsert_test() ->
     setup(),
+    demotable(),
     
     {ok, insert} = persi:upsert(demotable, 111, [{name, <<"Foo">>}]),
 
@@ -90,32 +84,29 @@ upsert_test() ->
     
     {ok, 1} = persi:delete(demotable, 111),
 
-    persi:remove_connection(),
-    
-    ok.
+    teardown().
+
 
 unknown_table_test() ->
     setup(),
     
     {error, _} = persi:delete(unknowntable, 123),
     
-    persi:remove_connection(),
-    
-    ok.
+    teardown().
 
 empty_selection_test() ->
     setup(),
+    demotable(),
     
     case catch persi:select(demotable, []) of
         {error, empty_selection} -> ok
     end,
-    
-    persi:remove_connection(),
-    
-    ok.
+
+    teardown().
 
 unknown_column_test() ->
     setup(),
+    demotable(),
     
     {error, enotfound} = persi:select(demotable, 123),
 
@@ -124,6 +115,4 @@ unknown_column_test() ->
     {error, {sqlite_error, _}} = persi:update(demotable, 123, [{name, <<"Foo">>}, {meh, moeder}]),
     {error, {sqlite_error, _}} = persi:upsert(demotable, 123, [{name, <<"Foo">>}, {meh, moeder}]),
     
-    persi:remove_connection(),
-    
-    ok.
+    teardown().

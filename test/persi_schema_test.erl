@@ -23,12 +23,8 @@
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("persi/include/persi.hrl").
 
+-include("persi_eunit.hrl").
 -define(DBFILE, ":memory:").
-
-setup() ->
-    application:start(gproc),
-    application:start(persi),
-    ok.
 
 schema_info_test() ->
     application:start(gproc),
@@ -48,7 +44,6 @@ table_info_test() ->
 
 create_table_test() ->
     setup(),
-    persi:add_connection([{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
 
     Table = #persi_table{name=hello,
                          columns=
@@ -60,11 +55,30 @@ create_table_test() ->
     
     ok = persi:create_table(Table),
     {error, eexist} = persi:create_table(Table),
-    persi:remove_connection(),
-    ok.
+    teardown().
 
+drop_table_test() ->
+    setup(),
+
+    ok = persi:create_table(#persi_table{name=foo, columns=[#persi_column{name=id, type=int}]}),
+    ok = persi:drop_table(foo),
+    teardown().
+
+
+add_column_test() ->
+    setup(),
+
+    ok = persi:create_table(#persi_table{name=foo, columns=[#persi_column{name=id, type=int}]}),
+    ok = persi:add_column(foo, #persi_column{name=data, type=blob}),
+
+    {ok, T} = persi:table_info(foo),
+    [id, data] = [C#persi_column.name || C <- T#persi_table.columns],
+    
+    teardown().
+
+    
 schema_migration_test() ->
-    persi:add_connection([{driver, persi_driver_esqlite}, {dbfile, ?DBFILE}]),
+    setup(),
 
     meck:new(migrations_example, [non_strict]),
 
@@ -103,6 +117,4 @@ schema_migration_test() ->
     {upgrade, 4} = persi:manage_schema(migrations_example),
     noop = persi:manage_schema(migrations_example),
 
-    persi:remove_connection(),
-    
-    ok.
+    teardown().

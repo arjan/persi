@@ -18,8 +18,8 @@
 
 -module(persi_driver_esqlite).
 
--behaviour(persi_driver).
 -behaviour(gen_server).
+-behaviour(persi_driver).
 
 -include_lib("persi/include/persi.hrl").
 
@@ -27,9 +27,8 @@
 
 %% gen_server exports
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
--export([start_link/1]).
 
-%% presi_driver exports
+%% persi_driver exports
 -export(
    [
     schema_info/1,
@@ -43,15 +42,9 @@
 -export([
         ]).
 
-
 %%====================================================================
 %% API
 %%====================================================================
-%% @spec start_link() -> {ok,Pid} | ignore | {error,Error}
-%% @doc Starts the server
-start_link(Args) when is_list(Args) ->
-    gen_server:start_link(?MODULE, Args, []).
-
 
 schema_info(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, schema_info).

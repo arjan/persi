@@ -15,7 +15,7 @@ Design goals
 * Aiming for 100% test coverage
 * No result caching - caching should be done in application code
 * Aiming for 100% test coverage
-
+* 100% typespec (dialyzer)
 
 Features
 --------
