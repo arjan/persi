@@ -39,7 +39,7 @@ add(Connection, Opts) when is_atom(Connection), is_list(Opts) ->
 remove(Connection) when is_atom(Connection) ->
     case whereis_driver(Connection) of
         undefined ->
-            throw({error, unknown_connection});
+            {error, enotfound};
         Pid when is_pid(Pid) ->
             ok = supervisor:terminate_child(persi_driver_sup, Pid)
     end.

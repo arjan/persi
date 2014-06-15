@@ -53,11 +53,13 @@ unknown_connection_test() ->
     application:start(gproc),
     application:start(persi),
 
-    case catch persi:remove_connection(sdfdfds) of
+    {error, enotfound} = persi:remove_connection(sdfdfds),
+
+    case catch persi:schema_info(sdfdfds) of
         {error, unknown_connection} -> ok
     end,
 
-    case catch persi:schema_info(sdfdfds) of
+    case catch persi:table_info(fdsfds, sdfdfds) of
         {error, unknown_connection} -> ok
     end,
     ok.
