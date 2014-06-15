@@ -30,6 +30,8 @@
     select/3
    ]).
 
+-define(param(N), Mod:map_dialect({sql_parameter, N})).
+
 
 -spec insert(persi:table(), persi:row(), persi:connection()) -> ok | persi:error().
 insert(TableName, Row0, Connection) when is_atom(TableName) ->
@@ -44,14 +46,14 @@ insert(TableName, Row0, Connection) when is_atom(TableName) ->
                      {[], []},
                      Row),
     
+    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
     Sql = [<<"INSERT INTO ">>, atom_to_list(TableName),
            " (",
            persi_util:iolist_join(Cols, $,),
            ") VALUES (",
-           persi_util:iolist_join([$? || _ <- lists:seq(1, length(Cols))], $,),
+           persi_util:iolist_join([?param(N) || N <- lists:seq(1, length(Cols))], $,),
            ")"],
 
-    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
     case Mod:fetchall(Sql, Args, Driver) of
         {ok, {[[1]], _, _}} ->
             ok;
@@ -62,18 +64,19 @@ insert(TableName, Row0, Connection) when is_atom(TableName) ->
 
 -spec update(persi:table(), persi:selection(), persi:row(), persi:connection()) -> {ok, non_neg_integer()} | persi:error().
 update(TableName, Selection, Row0, Connection) when is_atom(TableName) ->
+    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
 
     {ok, TableInfo} = persi_schema:table_info(TableName, Connection),
     Row = opt_fold_props(TableInfo, Row0, Selection, Connection),
 
     {Ks,Vs} = lists:unzip(Row),
+    Ksn = lists:zip(lists:seq(1, length(Ks)), Ks),
     Sets = persi_util:iolist_join(
-             [[atom_to_list(K), " = ?"] || K <- Ks], $,),
+             [[atom_to_list(K), " = ", ?param(N)] || {N, K} <- Ksn], $,),
     
-    {Where, WhereArgs} = selection_where(Selection),
+    {Where, WhereArgs} = selection_where(Selection, Mod, length(Vs)+1),
     Sql = [<<"UPDATE ">>, atom_to_list(TableName), " SET ", Sets, " WHERE ", Where],
 
-    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
     case Mod:fetchall(Sql, Vs ++ WhereArgs, Driver) of
         {ok, {[[0]], _, _}} ->
             {error, enotfound};
@@ -99,7 +102,7 @@ upsert(TableName, Selection, Row, Connection) when is_atom(TableName) ->
 delete(TableName, Selection, Connection) when is_atom(TableName) ->
     Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
 
-    {Where, Args} = selection_where(Selection),
+    {Where, Args} = selection_where(Selection, Mod),
     Sql = [<<"DELETE FROM ">>, atom_to_list(TableName), " WHERE ", Where],
     case Mod:fetchall(Sql, Args, Driver) of
         {ok, {_, _, 0}} ->
@@ -112,11 +115,11 @@ delete(TableName, Selection, Connection) when is_atom(TableName) ->
 
 -spec select(persi:table(), persi:selection(), persi:connection()) -> {ok, persi:row()} | persi:error().
 select(TableName, Selection, Connection) when is_atom(TableName) ->
+    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
 
-    {Where, Args} = selection_where(Selection),
+    {Where, Args} = selection_where(Selection, Mod),
     Sql = [<<"SELECT * FROM ">>, atom_to_list(TableName), " WHERE ", Where, " LIMIT 1"],
 
-    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
     case Mod:fetchall(Sql, Args, Driver) of
         {ok, {[], _, _}} ->
             {error, enotfound};
@@ -133,19 +136,23 @@ rowterm(Simple) when not(is_list(Simple)) ->
 rowterm(R) ->
     R.
 
+-spec selection_where(persi:selection(), module()) -> {iolist(), persi:sql_args()}.
+selection_where(X, Y) ->
+    selection_where(X, Y, 1).
 
--spec selection_where(persi:selection()) -> {iolist(), persi:sql_args()}.
-selection_where(Simple) when not(is_list(Simple)) ->
-    selection_where(rowterm(Simple));
-selection_where([]) ->
+-spec selection_where(persi:selection(), module(), non_neg_integer()) -> {iolist(), persi:sql_args()}.
+selection_where(Simple, M, N) when not(is_list(Simple)) ->
+    selection_where(rowterm(Simple), M, N);
+selection_where([], _, _) ->
     throw({error, empty_selection});
-selection_where(KVs) when is_list(KVs) ->
-    {Clauses, Args} = lists:foldr(
-                        fun({K, V}, {C0, A0}) ->
-                                {[ [atom_to_list(K), " = ?"] | C0], [V | A0]}
-                        end,
-                        {[], []},
-                        KVs),
+selection_where(KVs, Mod, StartN) when is_list(KVs) ->
+    {Clauses, Args, _}
+        = lists:foldr(
+            fun({K, V}, {C0, A0, N}) ->
+                    {[ [atom_to_list(K), " = ", ?param(N)] | C0], [V | A0], N+1}
+            end,
+            {[], [], StartN},
+            KVs),
     {persi_util:iolist_join(Clauses, " AND "), Args}.
 
                                    
@@ -162,10 +169,10 @@ opt_fold_props(#persi_table{has_props=true, columns=Columns, name=TableName}, Ro
                     Props0;
                 _ ->
                     %% merge props on update
-                    {Where, WhereArgs} = selection_where(PK),
+                    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+                    {Where, WhereArgs} = selection_where(PK, Mod),
                     Sql = [<<"SELECT ">>, atom_to_list(?persi_props_column_name), <<" FROM ">>, atom_to_list(TableName), " WHERE ", Where],
 
-                    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
                     case Mod:fetchall(Sql, WhereArgs, Driver) of
                         {ok, {[], _, _}} ->
                             Props0;

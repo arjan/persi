@@ -39,7 +39,9 @@
 -callback fetchall(persi:sql(), persi:sql_args(), #persi_driver{}) ->
     {ok, {persi:sql_result(), persi:column_names(), non_neg_integer()}} | persi:error().
 
-
+-callback map_dialect(atom() | {atom(), term()}) ->
+    term().
+   
 -export([start_driver/3, reg/1]).
 
 -spec start_driver(persi:connection(), module(), persi:connection_opts()) -> {ok, pid()}.

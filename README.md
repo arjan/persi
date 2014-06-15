@@ -30,8 +30,9 @@ Features
 
 To do list
 ----------
-* PostgreSQL support
 * Data migration from / to props column when adding/dropping columns
+* PostgreSQL support
+* Transaction support
 
 
 Naming

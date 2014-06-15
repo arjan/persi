@@ -43,6 +43,7 @@ remove(Connection) when is_atom(Connection) ->
         undefined ->
             {error, enotfound};
         #persi_driver{pid=Pid} ->
+            ok = gen_server:call(Pid, remove_connection),
             ok = supervisor:terminate_child(persi_driver_sup, Pid)
     end.
 

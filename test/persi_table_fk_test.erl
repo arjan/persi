@@ -67,5 +67,9 @@ full_test() ->
     {error, _} = persi:insert(track, [{id, 1}, {artist_id, 666}, {name, <<"Heal the World">>}]),
   
     ok = persi:insert(track, [{id, 1}, {artist_id, 1}, {name, <<"Heal the World">>}]),
-  
+
+    %% in this order
+    persi:drop_table(track),  
+    persi:drop_table(artist),
+    
     teardown().

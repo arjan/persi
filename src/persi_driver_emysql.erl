@@ -38,7 +38,8 @@
     table_info/2,
     exec/2,
     flush_metadata/1,
-    fetchall/3
+    fetchall/3,
+    map_dialect/1
    ]).
 
 %% interface functions
@@ -80,6 +81,9 @@ fetchall(Sql, Args, #persi_driver{id=Id}) ->
             {error, {emysql, Msg1}}
     end.
 
+map_dialect({columntype, X}) -> X;
+map_dialect({sql_parameter, _N}) -> "?".
+
 
 %%====================================================================
 %% gen_server callbacks
@@ -99,6 +103,10 @@ init({Id, Args}) ->
 
     {ok, #state{id=Id, metadata=do_schema_info(Id)}}.
 
+
+handle_call(remove_connection, _From, State) ->
+    %% Here drivers have the chance to clean up after themselves
+    {reply, ok, State};
 
 handle_call(schema_info, _From, State=#state{metadata=Metadata}) ->
     {reply, Metadata, State};
