@@ -14,8 +14,7 @@ Design goals
 * API is purely functional, it is not an ORM.
 * Database schema versioning and migrations
 * Aiming for 100% test coverage
-* Aiming for 100% test coverage
-* 100% typespec (dialyzer)
+* 100% typespec'd (dialyzer)
 
 
 Features
