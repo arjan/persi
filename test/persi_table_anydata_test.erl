@@ -101,8 +101,11 @@ legacy_test() ->
     demotable(),
     
     %% insert some legacy data
-    persi_query:fetchall("INSERT INTO demotable (id, props) VALUES (?, ?)",
-                         [444, term_to_binary( {[{foo, bar}]} )]),
+    InsertQ = case os:getenv("PERSI_DBDRIVER") of
+                  "pgsql" -> "INSERT INTO demotable (id, props) VALUES ($1, $2)";
+                  _ -> "INSERT INTO demotable (id, props) VALUES (?, ?)"
+              end,
+    persi_query:fetchall(InsertQ, [444, term_to_binary( {[{foo, bar}]} )]),
 
     {ok, Row1} = persi:select(demotable, [{id, 444}]),
     

@@ -61,7 +61,6 @@ flush_metadata(#persi_driver{pid=Pid}) ->
     gen_server:call(Pid, flush_metadata).
 
 fetchall(Sql, Args, Driver=#persi_driver{}) ->
-    %%io:format(user, ">> ~p~n~p~n", [iolist_to_binary(Sql), Args]),
     case equery(locate_pool(Driver), iolist_to_binary(Sql), Args) of
         {ok, Cols, Rows} ->
             {ok, {[tuple_to_list(R) || R <- Rows],
@@ -182,13 +181,16 @@ do_table_info(TableName, Args, Pool) ->
                           and table_name = $3
                         order by ordinal_position", [Db, DbSchema, TableName]),
     
-    Cols = lists:map(fun({ColumnName, ColumnType, Null, Default}) -> 
-                             #persi_column{name=erlang:binary_to_atom(ColumnName, utf8),
-                                           type=ColumnType,
-                                           default=Default,
-                                           notnull= Null =:= <<"NO">>}
-                     end,
-                     RawCols),
+    {Cols, HasProps} = lists:foldr(
+                         fun({ColumnName, ColumnType, Null, Default}, {Cols0, H}) -> 
+                                 {[#persi_column{name=erlang:binary_to_atom(ColumnName, utf8),
+                                                 type=ColumnType,
+                                                 default=Default,
+                                                 notnull= Null =:= <<"NO">>} | Cols0],
+                                  H orelse binary_to_atom(ColumnName, utf8) =:= ?persi_props_column_name}
+                         end,
+                         {[], false},
+                         RawCols),
 
     %% {Cols, {PKs, HasProps}} =
     %%     lists:mapfoldl(fun({C=#persi_column{name=Name}, true}, {Acc, HasProps}) ->
@@ -208,7 +210,7 @@ do_table_info(TableName, Args, Pool) ->
     %%                 end,
     %%                 R1#result_packet.rows),
 
-    PKs = [], FKs = [], HasProps=false,
+    PKs = [], FKs = [],
     
     #persi_table{
        name=TableName,

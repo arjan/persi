@@ -10,7 +10,7 @@ setup() ->
                           {persi_driver_emysql, [{user, "root"}, {password, ""}, {database, "persi_test"}]};
                      "pgsql" ->
                          application:start(epgsql),
-                          {persi_driver_epgsql, [{user, "zotonic"}, {password, ""}, {database, "persi_test"}]};
+                          {persi_driver_epgsql, [{user, "persi"}, {password, ""}, {database, "persi_test"}]};
                      _ ->
                           {persi_driver_esqlite, [{dbfile, ":memory:"}]}
                  end,
