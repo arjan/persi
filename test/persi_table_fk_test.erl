@@ -47,6 +47,25 @@ tables() ->
     
     ok.
 
+
+schema_test() ->
+    setup(),
+    tables(),
+    
+    {ok, T} = persi:table_info(track),
+
+    [id] = T#persi_table.pk,
+    
+    [FK] = T#persi_table.fks,
+
+    artist = FK#persi_fk.table,
+    artist_id = FK#persi_fk.from,
+    id = FK#persi_fk.to,
+
+    persi:drop_table(track),  
+    persi:drop_table(artist),
+    
+    teardown().
     
 full_test() ->
     setup(),

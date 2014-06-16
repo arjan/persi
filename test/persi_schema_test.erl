@@ -75,3 +75,23 @@ add_column_test() ->
     [id, data] = [C#persi_column.name || C <- T#persi_table.columns],
     
     teardown().
+
+
+
+drop_column_test() ->
+
+    setup(),
+    case os:getenv("PERSI_DBDRIVER") of
+        "sqlite" ->
+            %% Does not support dropping columns
+            skip;
+        _ ->
+
+            ok = persi:create_table(#persi_table{name=foo, columns=[#persi_column{name=id, type=int}, #persi_column{name=number, type=int}]}),
+            ok = persi:drop_column(foo, number),
+
+            {ok, T} = persi:table_info(foo),
+            [id] = [C#persi_column.name || C <- T#persi_table.columns]
+    end,
+    
+    teardown().

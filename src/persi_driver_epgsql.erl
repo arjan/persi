@@ -192,25 +192,33 @@ do_table_info(TableName, Args, Pool) ->
                          {[], false},
                          RawCols),
 
-    %% {Cols, {PKs, HasProps}} =
-    %%     lists:mapfoldl(fun({C=#persi_column{name=Name}, true}, {Acc, HasProps}) ->
-    %%                            {C, {[Name|Acc], HasProps orelse Name =:= ?persi_props_column_name}};
-    %%                       ({C=#persi_column{name=Name}, false}, {Acc, HasProps}) ->
-    %%                            {C, {Acc, HasProps orelse Name =:= ?persi_props_column_name}} end,
-    %%                    {[], false},
-    %%                    WithPK),
+    {ok, _, RawFKs} = 
+        equery(Pool,
+               "SELECT
+                kcu.column_name, ccu.table_name AS foreign_table_name,
+                    ccu.column_name AS foreign_column_name 
+                FROM 
+                    information_schema.table_constraints AS tc 
+                    JOIN information_schema.key_column_usage AS kcu
+                      ON tc.constraint_name = kcu.constraint_name
+                    JOIN information_schema.constraint_column_usage AS ccu
+                      ON ccu.constraint_name = tc.constraint_name
+                WHERE constraint_type = 'FOREIGN KEY' AND tc.table_name=$1", [TableName]),
+    FKs = lists:map(fun({From, Table, To}) ->
+                            #persi_fk{table=erlang:binary_to_atom(Table, utf8),
+                                      from=erlang:binary_to_atom(From, utf8),
+                                      to=erlang:binary_to_atom(To, utf8)}
+                    end,
+                    RawFKs),
 
-    %% Sql1 = [<<"SELECT column_name, referenced_table_name, referenced_column_name FROM information_schema.key_column_usage WHERE table_name = '">>, erlang:atom_to_binary(TableName, utf8), <<"' AND referenced_table_name IS NOT NULL">>],
-    %% R1 = emysql:execute(Id, iolist_to_binary(Sql1)),
-
-    %% FKs = lists:map(fun([From, Table, To]) ->
-    %%                         #persi_fk{table=erlang:binary_to_atom(Table, utf8),
-    %%                                   from=erlang:binary_to_atom(From, utf8),
-    %%                                   to=erlang:binary_to_atom(To, utf8)}
-    %%                 end,
-    %%                 R1#result_packet.rows),
-
-    PKs = [], FKs = [],
+    {ok, _, RawPKs} = 
+        equery(Pool,
+               "SELECT column_name FROM 
+                    information_schema.table_constraints AS tc 
+                    JOIN information_schema.key_column_usage AS kcu
+                      ON tc.constraint_name = kcu.constraint_name
+                WHERE constraint_type = 'PRIMARY KEY' AND tc.table_name=$1", [TableName]),
+    PKs = lists:map(fun({C}) -> binary_to_atom(C, utf8) end, RawPKs),
     
     #persi_table{
        name=TableName,
