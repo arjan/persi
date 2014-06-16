@@ -36,7 +36,7 @@
 -callback flush_metadata(#persi_driver{}) -> ok.
 
 %% @doc Full query, returns all rows plus column information
--callback fetchall(persi:sql(), persi:sql_args(), #persi_driver{}) ->
+-callback q(persi:sql(), persi:sql_args(), #persi_driver{}) ->
     {ok, {persi:sql_result(), persi:column_names(), non_neg_integer()}} | persi:error().
 
 -callback map_dialect(atom() | {atom(), term()}) ->

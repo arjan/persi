@@ -36,7 +36,7 @@
     table_info/2,
     exec/2,
     flush_metadata/1,
-    fetchall/3,
+    q/3,
     map_dialect/1
    ]).
 
@@ -60,7 +60,7 @@ exec(Sql, Driver=#persi_driver{}) ->
 flush_metadata(#persi_driver{pid=Pid}) ->
     gen_server:call(Pid, flush_metadata).
 
-fetchall(Sql, Args, Driver=#persi_driver{}) ->
+q(Sql, Args, Driver=#persi_driver{}) ->
     case equery(locate_pool(Driver), iolist_to_binary(Sql), Args) of
         {ok, Cols, Rows} ->
             {ok, {[tuple_to_list(R) || R <- Rows],

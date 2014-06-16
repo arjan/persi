@@ -21,19 +21,19 @@
 -include_lib("persi/include/persi.hrl").
 -include("persi_int.hrl").
 
--export([fetchall/2, fetchall/3]).
+-export([q/2, q/3]).
 
--export_type([fetchall_result/0]).
+-export_type([q_result/0]).
 
--type fetchall_result() ::
+-type q_result() ::
         {ok, {persi:sql_result(), persi:column_names(), non_neg_integer()}} | persi:error().        
 
--spec fetchall(persi:sql(), persi:sql_args()) -> fetchall_result().
-fetchall(Sql, Args) ->
-    fetchall(Sql, Args, ?PERSI_DEFAULT_CONNECTION).
+-spec q(persi:sql(), persi:sql_args()) -> q_result().
+q(Sql, Args) ->
+    q(Sql, Args, ?PERSI_DEFAULT_CONNECTION).
 
--spec fetchall(persi:sql(), persi:sql_args(), persi:connection()) -> {ok, {persi:sql_result(), persi:column_names(), non_neg_integer()}} | persi:error().
-fetchall(Sql, Args, Connection) ->
+-spec q(persi:sql(), persi:sql_args(), persi:connection()) -> {ok, {persi:sql_result(), persi:column_names(), non_neg_integer()}} | persi:error().
+q(Sql, Args, Connection) ->
     Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
-    Mod:fetchall(Sql, Args, Driver).
+    Mod:q(Sql, Args, Driver).
 

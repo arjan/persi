@@ -127,13 +127,13 @@ manage(SchemaModule, Connection) ->
     end,
     Version = SchemaModule:schema_version(),
     #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
-    {ok, SchemaResult} = persi_query:fetchall(["SELECT version FROM schema_version WHERE schema_module = ", ?param(1)], [SchemaModule], Connection),
+    {ok, SchemaResult} = persi_query:q(["SELECT version FROM schema_version WHERE schema_module = ", ?param(1)], [SchemaModule], Connection),
     case SchemaResult of
         {[], _, _} ->
             %% install
             ok = SchemaModule:manage(install, Connection),
             %% insert version
-            persi_query:fetchall(["INSERT INTO schema_version (schema_module, version) VALUES (", ?param(1), ", ", ?param(2), ")"],
+            persi_query:q(["INSERT INTO schema_version (schema_module, version) VALUES (", ?param(1), ", ", ?param(2), ")"],
                                  [SchemaModule, Version], Connection),
             install;
         {[[Version]], _, _} ->
@@ -141,7 +141,7 @@ manage(SchemaModule, Connection) ->
         {[[OlderVersion]], _, _} when OlderVersion < Version ->
             Upgrades = lists:seq(OlderVersion+1, Version),
             [ok = SchemaModule:manage({upgrade, V}, Connection) || V <- Upgrades],
-            persi_query:fetchall(["UPDATE schema_version SET version = ", ?param(1), " WHERE schema_module = ", ?param(2)],
+            persi_query:q(["UPDATE schema_version SET version = ", ?param(1), " WHERE schema_module = ", ?param(2)],
                                  [Version, SchemaModule], Connection),
             {upgrade, Version};
         {[[_]], _, _} ->
@@ -202,14 +202,14 @@ foreign_key_sql(#persi_fk{table=Table, from=From, to=To}, _DriverModule) ->
 %% FIXME wrap this in a single transaction instead of making separate calls to the driver
 migrate_from_props(TableName, ColumnName, #persi_driver{module=Mod}=Driver) ->
     Mod:exec("BEGIN", Driver),
-    {ok, {All, _, _}} = Mod:fetchall(["SELECT id, props FROM ", atom_to_list(TableName)], [], Driver),
+    {ok, {All, _, _}} = Mod:q(["SELECT id, props FROM ", atom_to_list(TableName)], [], Driver),
     [begin
          Props = binary_to_term(PropsBin),
          case proplists:lookup(ColumnName, Props) of
              none ->
                  skip;
              {_, V} -> 
-                 Mod:fetchall(["UPDATE ", atom_to_list(TableName), " SET ",
+                 Mod:q(["UPDATE ", atom_to_list(TableName), " SET ",
                                atom_to_list(ColumnName), " = ", ?param(1),
                                ", props = ", ?param(2), " WHERE id = ", ?param(3)],
                               [V, term_to_binary(proplists:delete(ColumnName, Props)), Id],
@@ -222,7 +222,7 @@ migrate_from_props(TableName, ColumnName, #persi_driver{module=Mod}=Driver) ->
 
 migrate_to_props(TableName, ColumnName, #persi_driver{module=Mod}=Driver) ->
     Mod:exec("BEGIN", Driver),
-    {ok, {All, _, _}} = Mod:fetchall(["SELECT id, ", atom_to_list(ColumnName), ", props FROM ", atom_to_list(TableName)], [], Driver),
+    {ok, {All, _, _}} = Mod:q(["SELECT id, ", atom_to_list(ColumnName), ", props FROM ", atom_to_list(TableName)], [], Driver),
     [begin
          case Value of
              undefined ->
@@ -230,7 +230,7 @@ migrate_to_props(TableName, ColumnName, #persi_driver{module=Mod}=Driver) ->
              _ -> 
                  Props = binary_to_term(PropsBin),
                  NewProps = [{ColumnName, Value} | proplists:delete(ColumnName, Props)],
-                 Mod:fetchall(["UPDATE ", atom_to_list(TableName),
+                 Mod:q(["UPDATE ", atom_to_list(TableName),
                                " SET props = ", ?param(1), " WHERE id = ", ?param(2)],
                               [term_to_binary(NewProps), Id],
                               Driver)

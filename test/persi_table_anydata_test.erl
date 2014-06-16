@@ -105,7 +105,7 @@ legacy_test() ->
                   "pgsql" -> "INSERT INTO demotable (id, props) VALUES ($1, $2)";
                   _ -> "INSERT INTO demotable (id, props) VALUES (?, ?)"
               end,
-    persi_query:fetchall(InsertQ, [444, term_to_binary( {[{foo, bar}]} )]),
+    persi_query:q(InsertQ, [444, term_to_binary( {[{foo, bar}]} )]),
 
     {ok, Row1} = persi:select(demotable, [{id, 444}]),
 
@@ -134,10 +134,10 @@ add_column_migrate_data_test() ->
     persi:add_column(demotable, #persi_column{name=name, type="varchar(255)"}),
 
     %% check that the data is now in the column
-    {ok, {[[123, <<"Foo">>]], _, _}} = persi_query:fetchall(<<"SELECT id, name FROM demotable">>, []),
+    {ok, {[[123, <<"Foo">>]], _, _}} = persi_query:q(<<"SELECT id, name FROM demotable">>, []),
 
     %% check that the props are now empty
-    {ok, {[[Empty]], _, _}} = persi_query:fetchall(<<"SELECT props FROM demotable">>, []),
+    {ok, {[[Empty]], _, _}} = persi_query:q(<<"SELECT props FROM demotable">>, []),
     [] = binary_to_term(Empty),
 
     teardown().
@@ -162,13 +162,13 @@ drop_column_migrate_data_test() ->
             ok = persi:insert(demotable, [{id, 123}, {name, <<"Foo">>}]),
 
             %% check that the name is in the column
-            {ok, {[[123, <<"Foo">>]], _, _}} = persi_query:fetchall(<<"SELECT id, name FROM demotable">>, []),
+            {ok, {[[123, <<"Foo">>]], _, _}} = persi_query:q(<<"SELECT id, name FROM demotable">>, []),
             
             %% drop_column will automatically move the 'name' property into the props
             persi:drop_column(demotable, name),
 
             %% check that name is now in the props
-            {ok, {[[HasName]], _, _}} = persi_query:fetchall(<<"SELECT props FROM demotable">>, []),
+            {ok, {[[HasName]], _, _}} = persi_query:q(<<"SELECT props FROM demotable">>, []),
             [{name, <<"Foo">>}] = binary_to_term(HasName)
                 
     end,

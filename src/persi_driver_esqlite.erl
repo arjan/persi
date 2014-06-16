@@ -36,7 +36,7 @@
     table_info/2,
     exec/2,
     flush_metadata/1,
-    fetchall/3,
+    q/3,
     map_dialect/1
    ]).
 
@@ -61,9 +61,9 @@ exec(Sql, #persi_driver{pid=Pid}) ->
 flush_metadata(#persi_driver{pid=Pid}) ->
     gen_server:call(Pid, flush_metadata).
 
-fetchall(Sql, Args, #persi_driver{pid=Pid}) ->
+q(Sql, Args, #persi_driver{pid=Pid}) ->
     %%io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
-    gen_server:call(Pid, {fetchall, iolist_to_binary(Sql), Args}).
+    gen_server:call(Pid, {q, iolist_to_binary(Sql), Args}).
 
 map_dialect({columntype, X}) -> X;
 map_dialect({sql_parameter, _N}) -> "?".
@@ -111,7 +111,7 @@ handle_call({table_info, Table}, _From, State=#state{metadata=Metadata}) ->
 handle_call({exec, Sql}, _From, State) ->
     {reply, esqlite3:exec(iolist_to_binary(Sql), State#state.db), State};
 
-handle_call({fetchall, Sql, Args}, _From, State) ->
+handle_call({q, Sql, Args}, _From, State) ->
     Result = case esqlite3:prepare(iolist_to_binary(Sql), State#state.db) of
                  {ok, Stmt} ->
                      ColNames = esqlite3:column_names(Stmt),

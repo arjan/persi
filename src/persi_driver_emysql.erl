@@ -38,7 +38,7 @@
     table_info/2,
     exec/2,
     flush_metadata/1,
-    fetchall/3,
+    q/3,
     map_dialect/1
    ]).
 
@@ -64,7 +64,7 @@ exec(Sql, #persi_driver{id=Id}) ->
 flush_metadata(#persi_driver{pid=Pid}) ->
     gen_server:call(Pid, flush_metadata).
 
-fetchall(Sql, Args, #persi_driver{id=Id}) ->
+q(Sql, Args, #persi_driver{id=Id}) ->
     Stmt = ?MODULE,
     try
         emysql:prepare(Stmt, iolist_to_binary(Sql)),

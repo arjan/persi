@@ -8,7 +8,6 @@ Abstraction layer for dealing with relational databases in Erlang.
 
 Design goals
 ------------
-
 * Simple, easy to learn API
 * Support multiple database backends
 * API is purely functional, it is not an ORM.
@@ -26,12 +25,9 @@ Supported database drivers
 
 Features
 --------
-
 * Metadata caching (table / schema info) in driver layer
 * No result caching - caching should be done in application code
-
 * Optionally allow for arbitrary key / values in tables (serialized in a blob column)
-
 * Data migration from / to props column when adding/dropping columns
 * Support for foreign key constraints
 
