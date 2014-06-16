@@ -35,35 +35,35 @@ demotable() ->
                               #persi_column{name=id, type=int},
                               ?persi_props_column
                              ],
-                        pk=[id]},
+                         pk=[id]},
     persi:create_table(Table),
-    
+
     ok.
 
 
 full_test() ->
     setup(),
     demotable(),
-    
+
     {error, enotfound} = persi:select(demotable, 123),
     {error, enotfound} = persi:delete(demotable, 123),
 
     {ok, T1} = persi:table_info(demotable),
     true = T1#persi_table.has_props,
-    
+
     ok = persi:insert(demotable, [{id, 123}, {name, <<"Foo">>}, {data, ?complicated_term}]),
 
     {ok, Row} = persi:select(demotable, 123),
     123 = proplists:get_value(id, Row),
     <<"Foo">> = proplists:get_value(name, Row),
     ?complicated_term = proplists:get_value(data, Row),
-    
+
     {ok, 1} = persi:update(demotable, 123, [{name, <<"Bar">>}]),
     {ok, Row1} = persi:select(demotable, 123),
     123 = proplists:get_value(id, Row1),
     <<"Bar">> = proplists:get_value(name, Row1),
     ?complicated_term = proplists:get_value(data, Row1),
-    
+
     {ok, 1} = persi:delete(demotable, 123),
     {error, enotfound} = persi:select(demotable, 123),
 
@@ -73,10 +73,10 @@ full_test() ->
 upsert_test() ->
     setup(),
     demotable(),
-    
+
     {ok, insert} = persi:upsert(demotable, 111, [{name, <<"Foo">>}]),
     {ok, insert} = persi:upsert(demotable, [{id, 33333}], [{name, <<"Another row">>}]),
-    
+
     {ok, _} = persi:select(demotable, 111),
 
     {ok, 1} = persi:upsert(demotable, 111, [{name, <<"Bar">>}]),
@@ -84,10 +84,10 @@ upsert_test() ->
 
     %% alternate selection mechanisms
     {ok, Row1} = persi:select(demotable, [{id, 111}]),
-    
+
     111 = proplists:get_value(id, Row1),
     <<"Bar">> = proplists:get_value(name, Row1),
-    
+
     {ok, 1} = persi:delete(demotable, 111),
 
     teardown().
@@ -99,7 +99,7 @@ upsert_test() ->
 legacy_test() ->
     setup(),
     demotable(),
-    
+
     %% insert some legacy data
     InsertQ = case os:getenv("PERSI_DBDRIVER") of
                   "pgsql" -> "INSERT INTO demotable (id, props) VALUES ($1, $2)";
@@ -108,7 +108,7 @@ legacy_test() ->
     persi_query:fetchall(InsertQ, [444, term_to_binary( {[{foo, bar}]} )]),
 
     {ok, Row1} = persi:select(demotable, [{id, 444}]),
-    
+
     444 = proplists:get_value(id, Row1),
     bar = proplists:get_value(foo, Row1),
 
@@ -120,10 +120,10 @@ legacy_test() ->
 
     teardown().
 
-column_migrate_test() ->
+add_column_migrate_data_test() ->
     setup(),
     demotable(),
-    
+
     {ok, T1} = persi:table_info(demotable),
     true = T1#persi_table.has_props,
 
@@ -140,4 +140,36 @@ column_migrate_test() ->
     {ok, {[[Empty]], _, _}} = persi_query:fetchall(<<"SELECT props FROM demotable">>, []),
     [] = binary_to_term(Empty),
 
+    teardown().
+
+
+drop_column_migrate_data_test() ->
+    setup(),
+    demotable(),
+
+    case os:getenv("PERSI_DBDRIVER") of
+        "sqlite" ->
+            %% Does not support dropping columns
+            skip;
+
+        _ ->
+            {ok, T1} = persi:table_info(demotable),
+            true = T1#persi_table.has_props,
+
+            persi:add_column(demotable, #persi_column{name=name, type="varchar(255)"}),
+            
+            %% here, 'name' is stored in the name column
+            ok = persi:insert(demotable, [{id, 123}, {name, <<"Foo">>}]),
+
+            %% check that the name is in the column
+            {ok, {[[123, <<"Foo">>]], _, _}} = persi_query:fetchall(<<"SELECT id, name FROM demotable">>, []),
+            
+            %% drop_column will automatically move the 'name' property into the props
+            persi:drop_column(demotable, name),
+
+            %% check that name is now in the props
+            {ok, {[[HasName]], _, _}} = persi_query:fetchall(<<"SELECT props FROM demotable">>, []),
+            [{name, <<"Foo">>}] = binary_to_term(HasName)
+                
+    end,
     teardown().

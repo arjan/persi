@@ -76,8 +76,6 @@ add_column_test() ->
     
     teardown().
 
-
-
 drop_column_test() ->
 
     setup(),

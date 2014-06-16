@@ -17,21 +17,29 @@ Design goals
 * 100% typespec'd (dialyzer)
 
 
+Supported database drivers
+--------------------------
+* SQLite (`esqlite` project)
+* MySQL (`emysql` with builtin connection pool)
+* PostgreSQL (`epgsql` with `poolboy` connection pool)
+
+
 Features
 --------
-* SQLite support
-* MySQL support (with emysql builtin connection pool)
+
 * Metadata caching (table / schema info) in driver layer
-* Optionally allow for arbitrary key / values in tables (serialized in a blob column)
-* Support for foreign key constraints
 * No result caching - caching should be done in application code
+
+* Optionally allow for arbitrary key / values in tables (serialized in a blob column)
+
+* Data migration from / to props column when adding/dropping columns
+* Support for foreign key constraints
 
 
 To do list
 ----------
-* Data migration from / to props column when adding/dropping columns
-* PostgreSQL support
 * Transaction support
+* pgsql: Disconnect inactive worker connections 
 
 
 Naming
