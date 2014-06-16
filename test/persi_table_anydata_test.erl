@@ -101,7 +101,7 @@ legacy_test() ->
     demotable(),
 
     %% insert some legacy data
-    InsertQ = case os:getenv("PERSI_DBDRIVER") of
+    InsertQ = case os:getenv("DBDRIVER") of
                   "pgsql" -> "INSERT INTO demotable (id, props) VALUES ($1, $2)";
                   _ -> "INSERT INTO demotable (id, props) VALUES (?, ?)"
               end,
@@ -147,7 +147,7 @@ drop_column_migrate_data_test() ->
     setup(),
     demotable(),
 
-    case os:getenv("PERSI_DBDRIVER") of
+    case os:getenv("DBDRIVER") of
         "sqlite" ->
             %% Does not support dropping columns
             skip;

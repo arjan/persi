@@ -14,9 +14,9 @@ notifications:
     on_success: change #[always|never|change] # default: change
     on_failure: always #[always|never|change] # default: always
 before_script:
-  - sh -c "if [ '$PERSI_DBDRIVER' = 'mysql' ]; then mysql -e 'create database persi_test;'; fi"
-  - sh -c "if [ '$PERSI_DBDRIVER' = 'pgsql' ]; then psql -c \"create user persi password ''\" -U postgres; psql -c \"create database persi_test owner = persi;\" -U postgres; fi"
+  - sh -c "if [ '$DBDRIVER' = 'mysql' ]; then mysql -e 'create database persi_test;'; fi"
+  - sh -c "if [ '$DBDRIVER' = 'pgsql' ]; then psql -c \"create user persi password ''\" -U postgres; psql -c \"create database persi_test owner = persi;\" -U postgres; fi"
 env:
-  - PERSI_DBDRIVER=sqlite
-  - PERSI_DBDRIVER=mysql
-  - PERSI_DBDRIVER=pgsql
+  - DBDRIVER=sqlite
+  - DBDRIVER=mysql
+  - DBDRIVER=pgsql

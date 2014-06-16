@@ -3,7 +3,7 @@ setup() ->
     application:start(gproc),
     application:start(persi),
 
-    {Mod, Opts} = case os:getenv("PERSI_DBDRIVER") of
+    {Mod, Opts} = case os:getenv("DBDRIVER") of
                      "mysql" ->
                          crypto:start(),
                          application:start(emysql),

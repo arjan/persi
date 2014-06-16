@@ -79,7 +79,7 @@ add_column_test() ->
 drop_column_test() ->
 
     setup(),
-    case os:getenv("PERSI_DBDRIVER") of
+    case os:getenv("DBDRIVER") of
         "sqlite" ->
             %% Does not support dropping columns
             skip;

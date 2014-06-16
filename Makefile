@@ -1,5 +1,6 @@
 REBAR := ./rebar
 REBAR_URL := https://github.com/downloads/basho/rebar/rebar
+DBDRIVER ?= sqlite
 
 .PHONY: compile test
 
@@ -10,7 +11,7 @@ compile: $(REBAR)
 
 test: $(REBAR)
 	$(REBAR) -C rebar.test.config get-dep compile
-	$(REBAR) -C rebar.test.config eunit -v skip_deps=true
+	DBDRIVER=$(DBDRIVER) $(REBAR) -C rebar.test.config eunit -v skip_deps=true
 
 clean: $(REBAR)
 	$(REBAR) clean
