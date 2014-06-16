@@ -114,11 +114,12 @@ handle_call({exec, Sql}, _From, State) ->
 handle_call({fetchall, Sql, Args}, _From, State) ->
     Result = case esqlite3:prepare(iolist_to_binary(Sql), State#state.db) of
                  {ok, Stmt} ->
+                     ColNames = esqlite3:column_names(Stmt),
                      ok = esqlite3:bind(Stmt, Args),
                      case esqlite3:fetchall(Stmt) of
                          Ret when is_list(Ret) ->
                              {ok, NumRows} = esqlite3:changes(State#state.db),
-                             {ok, {[tuple_to_list(R) || R <- Ret], tuple_to_list(esqlite3:column_names(Stmt)), NumRows}};
+                             {ok, {[tuple_to_list(R) || R <- Ret], tuple_to_list(ColNames), NumRows}};
                          {error, _} = E ->
                              E
                      end;
