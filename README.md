@@ -34,13 +34,14 @@ Features
 
 To do list
 ----------
-* Transaction support
-* pgsql: Disconnect inactive worker connections 
+* Create indices on tables
+* Define API for querying and retrieving logical rows
+* pgsql: Disconnect inactive worker connections, like Zotonic does
+* Transaction support (hard, because `emysql` doesnt support it) 
 
 
 Naming
 ------
-
 The name, `persi` is an abbreviation of the word
 `persistence`. Because, after all, `persi`'s goal is to persist
 data. At the same time, it's the abbreviation of Robin van Persie's
