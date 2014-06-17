@@ -15,7 +15,7 @@ notifications:
     on_failure: always #[always|never|change] # default: always
 before_script:
   - sh -c "if [ '$DBDRIVER' = 'mysql' ]; then mysql -e 'create database persi_test;'; fi"
-  - sh -c "if [ '$DBDRIVER' = 'pgsql' ]; then psql -c \"create user persi password ''\" -U postgres; psql -c \"create database persi_test owner = persi;\" -U postgres; fi"
+  - sh -c "if [ '$DBDRIVER' = 'pgsql' ]; then sleep 5; psql -c \"create user persi password ''\" -U postgres; psql -c \"create database persi_test owner = persi;\" -U postgres; fi"
 env:
   - DBDRIVER=sqlite
   - DBDRIVER=mysql
