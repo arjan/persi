@@ -93,3 +93,32 @@ drop_column_test() ->
     end,
     
     teardown().
+
+
+column_types_test() ->
+    setup(),
+
+    T = #persi_table{
+           name=all_columns,
+           columns=
+               [
+                #persi_column{name=a, type=varchar, length=61}
+                #persi_column{name=b, type=varchar, length=161},
+                #persi_column{name=c, type=varchar, length=1},
+                #persi_column{name=d, type=varchar, length=3, default= <<"foo">>},
+
+                #persi_column{name=e, type=boolean},
+                #persi_column{name=f, type=boolean, default=true},
+                #persi_column{name=g, type=boolean, default=false},
+                
+                #persi_column{name=h, type=int},
+                #persi_column{name=i, type=int, default=12345}
+               ]
+          },
+    persi:create_table(T),
+
+    {ok, T1} = persi:table_info(all_columns),
+    %% test that the output schema is identical to the input, so it is parsed correctly
+    T1 = T,
+
+    teardown().

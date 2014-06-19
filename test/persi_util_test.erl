@@ -22,6 +22,7 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-include_lib("persi/include/persi.hrl").
 
 iolist_join_test() ->
 
@@ -32,3 +33,12 @@ iolist_join_test() ->
     <<"foo :: bar">> = iolist_to_binary(persi_util:iolist_join(["foo", "bar"], " :: ")),
 
     ok.
+
+
+map_sql_column_generic_test() ->
+    #persi_column{type=varchar, length=61} = persi_util:map_sql_to_column(<<"varchar(61)">>),
+    #persi_column{type=varchar, length=161} = persi_util:map_sql_to_column(<<"varchar(161)">>),
+    #persi_column{type=varchar, length=11} = persi_util:map_sql_to_column(<<"VARCHAR(11)">>),
+    undefined = persi_util:map_sql_to_column(<<"xxvarchar(61)">>),
+    ok.
+

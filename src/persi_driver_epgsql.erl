@@ -72,8 +72,9 @@ q(Sql, Args, Driver=#persi_driver{}) ->
             E
     end.
 
-map_dialect({columntype, blob}) -> <<"bytea">>;
-map_dialect({columntype, X}) -> X;
+map_dialect({check_support, _}) -> true;
+map_dialect({columntype, #persi_column{type=blob}}) -> <<"bytea">>;
+map_dialect({columntype, #persi_column{type=T}}) -> T;
 map_dialect({sql_parameter, N}) -> [$$ , $0 + N].  %% $1, $2, etc
 
 
@@ -174,7 +175,7 @@ do_table_info(TableName, Args, Pool) ->
 
     {ok, _, RawCols} =
         equery(Pool,
-               "  select column_name, data_type, is_nullable, column_default
+               "  select column_name, data_type, character_maximum_length, is_nullable, column_default
                         from information_schema.columns
                         where table_catalog = $1
                           and table_schema = $2
@@ -182,11 +183,11 @@ do_table_info(TableName, Args, Pool) ->
                         order by ordinal_position", [Db, DbSchema, TableName]),
     
     {Cols, HasProps} = lists:foldr(
-                         fun({ColumnName, ColumnType, Null, Default}, {Cols0, H}) -> 
-                                 {[#persi_column{name=erlang:binary_to_atom(ColumnName, utf8),
-                                                 type=ColumnType,
-                                                 default=Default,
-                                                 notnull= Null =:= <<"NO">>} | Cols0],
+                         fun({ColumnName, ColumnType, Length, Null, Default}, {Cols0, H}) -> 
+                               Column = map_columntype(ColumnType, map_value(Length)),
+                                 {[Column#persi_column{name=erlang:binary_to_atom(ColumnName, utf8),
+                                                       default=map_default(Default),
+                                                       notnull= Null =:= <<"NO">>} | Cols0],
                                   H orelse binary_to_atom(ColumnName, utf8) =:= ?persi_props_column_name}
                          end,
                          {[], false},
@@ -245,3 +246,37 @@ equery(Pool, Stmt, Params) ->
 
 locate_pool(#persi_driver{pid=Pid}) ->
     gproc:get_value({p, l, persi_pgsql_pool}, Pid).
+
+
+-spec map_columntype(binary(), non_neg_integer()) -> #persi_column{}.
+map_columntype(<<"integer">>, _) ->
+    #persi_column{type=int};
+map_columntype(<<"character varying">>, L) ->
+    #persi_column{type=varchar, length=L};
+map_columntype(X, _) ->
+    #persi_column{type=binary_to_atom(X, utf8)}.
+
+map_default(X) when is_binary(X) ->
+    case binary:split(X, <<"::">>) of
+        [<<"'", Value/binary>>, _Type] ->
+            hd(binary:split(Value, <<"'">>));
+        [X] ->
+            map_value(X)
+    end;
+map_default(X) ->
+    map_value(X).
+
+map_value(<<"false">>) -> false;
+map_value(<<"true">>) -> true;
+map_value(null) ->
+    undefined;
+map_value(X) when is_binary(X) ->
+    case re:run(X, "^[0-9]+$") of
+        {match, _} -> list_to_integer(binary_to_list(X));
+        nomatch -> 
+            X
+    end;
+map_value(X) ->
+    X.
+
+

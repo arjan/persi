@@ -20,22 +20,22 @@
 
 -include("persi_int.hrl").
 
-%% @doc Return metadata information about the entire database
+%% Return metadata information about the entire database
 -callback schema_info(#persi_driver{}) ->
     persi:schema_info().
 
-%% @doc Return metadata information about the table
+%% Return metadata information about the table
 -callback table_info(persi:table(), #persi_driver{}) ->
     {ok, persi:table_info()} | {error, enotfound}.
 
-%% @doc Execute a plain SQL query
+%% Execute a plain SQL query
 -callback exec(persi:sql(), #persi_driver{}) ->
     ok | {ok, RowsAffected :: non_neg_integer()}.
 
-%% @doc Flush any cached metadata in the driver process (called after a schema change)
+%% Flush any cached metadata in the driver process (called after a schema change)
 -callback flush_metadata(#persi_driver{}) -> ok.
 
-%% @doc Full query, returns all rows plus column information
+%% Full query, returns all rows plus column information
 -callback q(persi:sql(), persi:sql_args(), #persi_driver{}) ->
     {ok, {persi:sql_result(), persi:column_names(), non_neg_integer()}} | persi:error().
 

@@ -1,6 +1,6 @@
 %% @author Arjan Scherpenisse <arjan@miraclethings.nl>
 %% @copyright 2014 Arjan Scherpenisse
-%% @doc Include file with exported records
+%% @doc Selections of all kinds
 
 %% Copyright 2014 Arjan Scherpenisse
 %%
@@ -16,19 +16,12 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 
--record(persi_schema, {tables=[]}).
+-module(persi_select_test).
 
--record(persi_column, {name,
-                       type,
-                       default=undefined,
-                       length=undefined,
-                       notnull=false}).
+-compile([export_all]).
 
--record(persi_table, {name, columns=[], pk=[], fks=[], has_props=false}).
+-include_lib("eunit/include/eunit.hrl").
+-include_lib("persi/include/persi.hrl").
 
--record(persi_fk, {table, from, to}).
+-include("persi_eunit.hrl").
 
--define(persi_props_column_name, props).
--define(persi_props_column, #persi_column{name=?persi_props_column_name, type=blob, notnull=true}).
-
--define(PERSI_DEFAULT_CONNECTION, default).

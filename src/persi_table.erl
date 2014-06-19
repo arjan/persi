@@ -18,7 +18,7 @@
 
 -module(persi_table).
 
--include_lib("persi.hrl").
+-include_lib("persi/include/persi.hrl").
 -include("persi_int.hrl").
 
 -export(

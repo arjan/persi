@@ -55,17 +55,17 @@ table_info(Table, #persi_driver{pid=Pid})  when is_atom(Table) ->
     gen_server:call(Pid, {table_info, Table}).
 
 exec(Sql, #persi_driver{pid=Pid}) ->
-    %%io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
     gen_server:call(Pid, {exec, iolist_to_binary(Sql)}).
 
 flush_metadata(#persi_driver{pid=Pid}) ->
     gen_server:call(Pid, flush_metadata).
 
 q(Sql, Args, #persi_driver{pid=Pid}) ->
-    %%io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
     gen_server:call(Pid, {q, iolist_to_binary(Sql), Args}).
 
-map_dialect({columntype, X}) -> X;
+map_dialect({check_support, drop_column}) -> {error, drop_column_not_supported};
+map_dialect({check_support, _}) -> true;
+map_dialect({columntype, #persi_column{type=T}}) -> T;
 map_dialect({sql_parameter, _N}) -> "?".
 
 
@@ -170,11 +170,11 @@ do_list_tables(Connection) ->
 
 %% @doc Return a descripion of the table.
 do_table_info(TableName, Connection) ->
-    WithPK = esqlite3:map(fun({_Cid, ColumnName, ColumnType, NotNull, Default, PrimaryKey}) -> 
-                                  {#persi_column{name=erlang:binary_to_atom(ColumnName, utf8),
-                                                 type=ColumnType,
-                                                 default=Default,
-                                                 notnull=NotNull =/= 0}, PrimaryKey =/= 0}
+    WithPK = esqlite3:map(fun({_Cid, ColumnName, ColumnType, NotNull, Default, PrimaryKey}) ->
+                                  Column = map_columntype(ColumnType),
+                                  {Column#persi_column{name=erlang:binary_to_atom(ColumnName, utf8),
+                                                       default=map_value(ColumnType, Default),
+                                                       notnull=NotNull =/= 0}, PrimaryKey =/= 0}
                           end,
                           [<<"PRAGMA table_info('">>, erlang:atom_to_binary(TableName, utf8), <<"');">>], Connection),
     {Cols, {PKs, HasProps}} =
@@ -197,3 +197,22 @@ do_table_info(TableName, Connection) ->
        fks=FKs,
        has_props=HasProps}.
 
+
+-spec map_columntype(binary()) -> #persi_column{}.
+map_columntype(X) ->
+    case persi_util:map_sql_to_column(X) of
+        undefined ->
+            #persi_column{type=binary_to_atom(X, utf8)};
+        C ->
+            C
+    end.
+
+
+map_value(_, <<"false">>) -> false;
+map_value(_, <<"true">>) -> true;
+map_value(<<"int">>, V) when is_binary(V) ->
+    list_to_integer(binary_to_list(map_value(unknown, V)));
+map_value(_, <<"'", Rest/binary>>) ->
+    hd(binary:split(Rest, <<"'">>));
+map_value(_T, X) ->
+    X.

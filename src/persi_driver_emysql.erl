@@ -81,7 +81,9 @@ q(Sql, Args, #persi_driver{id=Id}) ->
             {error, {emysql, Msg1}}
     end.
 
-map_dialect({columntype, X}) -> X;
+map_dialect({check_support, #persi_column{type=varchar, length=undefined}}) -> {error, varchar_without_length};
+map_dialect({check_support, _}) -> true;
+map_dialect({columntype, #persi_column{type=T}}) -> T;
 map_dialect({sql_parameter, _N}) -> "?".
 
 
@@ -166,10 +168,10 @@ do_table_info(TableName, Id) ->
     R = emysql:execute(Id, Sql),
 
     WithPK = lists:map(fun([ColumnName, ColumnType, Null, Key, Default, _Extra]) -> 
-                               {#persi_column{name=erlang:binary_to_atom(ColumnName, utf8),
-                                              type=ColumnType,
-                                              default=Default,
-                                              notnull=Null =:= 0}, Key =:= <<"PRI">>}
+                               Column = map_columntype(ColumnType),
+                               {Column#persi_column{name=erlang:binary_to_atom(ColumnName, utf8),
+                                                    default=map_default(Default, ColumnType),
+                                                    notnull=Null =:= 0}, Key =:= <<"PRI">>}
                        end,
                        R#result_packet.rows),
 
@@ -197,4 +199,24 @@ do_table_info(TableName, Id) ->
        pk=PKs,
        fks=FKs,
        has_props=HasProps}.
+
+
+-spec map_columntype(binary()) -> #persi_column{}.
+map_columntype(<<"int(", _/binary>>) ->
+    #persi_column{type=int};
+map_columntype(<<"tinyint(1)">>) ->
+    #persi_column{type=boolean};
+map_columntype(X) ->
+    case persi_util:map_sql_to_column(X) of
+        undefined ->
+            #persi_column{type=binary_to_atom(X, utf8)};
+        C ->
+            C
+    end.
+
+map_default(Value, <<"int(", _/binary>>) when is_binary(Value) -> 
+    list_to_integer(binary_to_list(Value));
+map_default(<<"1">>, <<"tinyint(1)">>) -> true;
+map_default(<<"0">>, <<"tinyint(1)">>) -> false;
+map_default(V, _) -> V.
 

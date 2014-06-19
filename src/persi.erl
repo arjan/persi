@@ -76,14 +76,14 @@
     sql_args/0,
     sql_result/0,
     manage_result/0,
-    column_names/0
+    column_names/0,
+    column_type/0
    ]).
 
 -type error() :: {error, atom()}.
 
--type id() :: non_neg_integer() | binary().
-
 -type selection() :: binary() | integer() | atom() | [{col_name(), col_value()}].
+-type id() :: non_neg_integer() | binary() | atom().
 
 -type row() :: [{col_name(), col_value()}].
 -type col_name() :: atom().
@@ -104,7 +104,9 @@
 -type sql_result() :: term().
 
 -type column_names() :: list(atom()).
+-type column_type() :: varchar | int | decimal | bool | datetime | blob.
 
+        
 %%% CONNECTION %%%
 -spec add_connection(module(), connection_opts()) -> ok | {error, eexist}.
 add_connection(DriverModule, Opts) ->
@@ -125,10 +127,12 @@ remove_connection(Conn) ->
 
 %%% TABLE %%%
 
+%% @doc Insert a single row into the given table using the default connection.
 -spec insert(table(), row()) -> ok | error().
 insert(Table, Data) ->
     insert(Table, Data, ?PERSI_DEFAULT_CONNECTION).
 
+%% @doc Insert a single row into the given table.
 -spec insert(table(), row(), connection()) -> ok | error().
 insert(Table, Data, Conn) ->
     persi_table:insert(Table, Data, Conn).
@@ -138,6 +142,7 @@ insert(Table, Data, Conn) ->
 update(Table, Id, Data) ->
     update(Table, Id, Data, ?PERSI_DEFAULT_CONNECTION).
 
+%% @doc Update a row or a selection of rows in the given table.
 -spec update(table(), id(), row(), connection()) -> {ok, non_neg_integer()} | error().
 update(Table, Id, Data, Conn) ->
     persi_table:update(Table, Id, Data, Conn).

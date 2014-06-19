@@ -80,6 +80,7 @@ add_column(TableName, ColumnDef, Connection) ->
     case table_info(TableName, Connection) of
         {ok, #persi_table{has_props=HasProps}} ->
             Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+            true = Mod:map_dialect({check_support, add_column}),
             ok = Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" ADD COLUMN ">>,
                            create_column_sql(ColumnDef, Mod)], Driver),
             case HasProps of
@@ -98,6 +99,7 @@ drop_column(TableName, ColumnName, Connection) ->
     case table_info(TableName, Connection) of
         {ok, #persi_table{has_props=HasProps}} ->
             Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+            true = Mod:map_dialect({check_support, drop_column}),
             case HasProps of
                 true ->
                     migrate_to_props(TableName, ColumnName, Driver);
@@ -159,26 +161,33 @@ create_table_sql(#persi_table{name=Name, columns=Columns, pk=PK, fks=FKs}, Drive
       ),
      ")"].
 
-create_column_sql(#persi_column{name=Name, type=Type, default=Default, notnull=Notnull}, DriverModule) ->
+create_column_sql(Column=#persi_column{name=Name, default=Default, notnull=Notnull}, DriverModule) ->
+    true = DriverModule:map_dialect({check_support, Column}),
     [atom_to_list(Name),
-     " ", map_sql_type(Type, DriverModule),
+     " ", map_sql_type(Column, DriverModule),
      " ", map_sql_default(Default, DriverModule),
      " ", map_sql_notnull(Notnull, DriverModule)
     ].
 
-map_sql_type(T, _) when is_binary(T); is_list(T) ->
+map_sql_type(#persi_column{type=T}, _) when is_binary(T); is_list(T) ->
     T;
-map_sql_type(T, DriverModule) when is_atom(T) ->
-    case DriverModule:map_dialect({columntype, T}) of
-        A when is_atom(A) -> atom_to_list(A);
-        B -> B
+map_sql_type(Column=#persi_column{type=T}, DriverModule) when is_atom(T) ->
+    case persi_util:map_column_to_sql(Column) of
+        undefined ->
+            case DriverModule:map_dialect({columntype, Column}) of
+                A when is_atom(A) -> atom_to_list(A);
+                B -> B
+            end;
+        R -> R
     end.
-             
+
 
 map_sql_default(undefined, _DriverModule) ->
     "";
 map_sql_default(T, _DriverModule) when is_integer(T) ->
     map_sql_default(integer_to_list(T), _DriverModule);
+map_sql_default(B, _DriverModule) when B =:= true; B =:= false ->
+    ["DEFAULT ", atom_to_list(B)];
 map_sql_default(X, _DriverModule) when is_binary(X); is_list(X) ->
     ["DEFAULT '", X, "'"].
 
@@ -239,3 +248,12 @@ migrate_to_props(TableName, ColumnName, #persi_driver{module=Mod}=Driver) ->
     ],
     ok = Mod:exec("COMMIT", Driver),
     {ok, length(All)}.
+
+
+merge_column(A, B) ->
+    list_to_tuple(
+      lists:map(fun({undefined, X}) -> X;
+                   ({X, _}) -> X end,
+                lists:zip(tuple_to_list(A), tuple_to_list(B))
+               )).
+                         
