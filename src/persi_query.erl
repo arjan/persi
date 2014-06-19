@@ -30,7 +30,7 @@
 
 -spec q(persi:sql(), persi:sql_args()) -> q_result().
 q(Sql, Args) ->
-    io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
+    %%io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
     q(Sql, Args, ?PERSI_DEFAULT_CONNECTION).
 
 -spec q(persi:sql(), persi:sql_args(), persi:connection()) -> {ok, {persi:sql_result(), persi:column_names(), non_neg_integer()}} | persi:error().
