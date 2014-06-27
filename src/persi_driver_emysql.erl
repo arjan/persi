@@ -39,7 +39,9 @@
     exec/2,
     flush_metadata/1,
     q/3,
-    map_dialect/1
+    map_dialect/1,
+    acquire_connection/1,
+    release_connection/1
    ]).
 
 %% interface functions
@@ -82,9 +84,16 @@ q(Sql, Args, #persi_driver{id=Id}) ->
     end.
 
 map_dialect({check_support, #persi_column{type=varchar, length=undefined}}) -> {error, varchar_without_length};
+map_dialect({check_support, transactions}) -> {error, transactions_not_supported};
 map_dialect({check_support, _}) -> true;
 map_dialect({columntype, #persi_column{type=T}}) -> T;
 map_dialect({sql_parameter, _N}) -> "?".
+
+acquire_connection(#persi_driver{}) ->
+    throw(transactions_not_supported).
+release_connection(#persi_driver{}) ->
+    throw(transactions_not_supported).
+    
 
 
 %%====================================================================

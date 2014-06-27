@@ -37,7 +37,9 @@
     exec/2,
     flush_metadata/1,
     q/3,
-    map_dialect/1
+    map_dialect/1,
+    acquire_connection/1,
+    release_connection/1
    ]).
 
 %% interface functions
@@ -68,6 +70,11 @@ map_dialect({check_support, _}) -> true;
 map_dialect({columntype, #persi_column{type=T}}) -> T;
 map_dialect({sql_parameter, _N}) -> "?".
 
+acquire_connection(Driver=#persi_driver{}) ->
+    Driver#persi_driver{transaction=true}.
+release_connection(Driver=#persi_driver{}) ->
+    Driver#persi_driver{transaction=undefined}.
+    
 
 %%====================================================================
 %% gen_server callbacks

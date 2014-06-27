@@ -54,7 +54,14 @@
     drop_column/2,
     drop_column/3,
     manage_schema/1,
-    manage_schema/2
+    manage_schema/2,
+
+    %% persi_query wrappers
+    q/2,
+    q/3,
+    transaction/1,
+    transaction/2
+    
    ]).
 
 %% Types start here
@@ -74,7 +81,7 @@
     error/0,
     sql/0,
     sql_args/0,
-    sql_result/0,
+    q_result/0,
     manage_result/0,
     column_names/0,
     column_type/0
@@ -101,12 +108,14 @@
 
 -type sql() :: binary() | iolist().
 -type sql_args() :: [] | [term()].
--type sql_result() :: term().
+-type sql_row() :: list(term()).
 
 -type column_names() :: list(atom()).
 -type column_type() :: varchar | int | decimal | bool | datetime | blob.
 
-        
+-type q_result() :: {ok, {[sql_row()], column_names(), non_neg_integer()}} | persi:error().        
+
+
 %%% CONNECTION %%%
 -spec add_connection(module(), connection_opts()) -> ok | {error, eexist}.
 add_connection(DriverModule, Opts) ->
@@ -236,3 +245,23 @@ manage_schema(Module) ->
 manage_schema(Module, Conn) ->
     persi_schema:manage(Module, Conn).
 
+
+%% persi_query wrappers
+
+-spec q(sql(), sql_args()) -> q_result().
+q(Sql, Args) ->
+    %%io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
+    q(Sql, Args, ?PERSI_DEFAULT_CONNECTION).
+
+-spec q(sql(), sql_args(), connection()) -> q_result().
+q(Sql, Args, Connection) ->
+    persi_query:q(Sql, Args, Connection).
+
+
+-spec transaction(fun()) -> term().
+transaction(F) when is_function(F) ->
+    transaction(F, ?PERSI_DEFAULT_CONNECTION).
+
+-spec transaction(fun(), connection()) -> term().
+transaction(F, Conn) when is_function(F) ->
+    persi_query:transaction(F, Conn).

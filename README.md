@@ -30,14 +30,14 @@ Features
 * Optionally allow for arbitrary key / values in tables (serialized in a blob column)
 * Data migration from / to props column when adding/dropping columns
 * Support for foreign key constraints
+* Transaction support (except for MySQL)
 
 
 To do list
 ----------
 * Create indices on tables
 * Define API for querying and retrieving logical rows
-* pgsql: Disconnect inactive worker connections, like Zotonic does
-* Transaction support (hard, because `emysql` doesnt support it) 
+* pgsql: Disconnect inactive worker connections, like Zotonic does 
 
 
 Naming

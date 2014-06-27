@@ -37,7 +37,9 @@
     exec/2,
     flush_metadata/1,
     q/3,
-    map_dialect/1
+    map_dialect/1,
+    acquire_connection/1,
+    release_connection/1
    ]).
 
 %% interface functions
@@ -55,13 +57,13 @@ table_info(Table, #persi_driver{pid=Pid})  when is_atom(Table) ->
     gen_server:call(Pid, {table_info, Table}).
 
 exec(Sql, Driver=#persi_driver{}) ->
-    squery(locate_pool(Driver), iolist_to_binary(Sql)).
+    squery(Driver, iolist_to_binary(Sql)).
     
 flush_metadata(#persi_driver{pid=Pid}) ->
     gen_server:call(Pid, flush_metadata).
 
 q(Sql, Args, Driver=#persi_driver{}) ->
-    case equery(locate_pool(Driver), iolist_to_binary(Sql), Args) of
+    case equery(Driver, iolist_to_binary(Sql), Args) of
         {ok, Cols, Rows} ->
             {ok, {[tuple_to_list(R) || R <- Rows],
                   [binary_to_atom(element(2, C), utf8) || C <- Cols],
@@ -76,6 +78,15 @@ map_dialect({check_support, _}) -> true;
 map_dialect({columntype, #persi_column{type=blob}}) -> <<"bytea">>;
 map_dialect({columntype, #persi_column{type=T}}) -> T;
 map_dialect({sql_parameter, N}) -> [$$ , $0 + N].  %% $1, $2, etc
+
+
+acquire_connection(Driver=#persi_driver{}) ->
+    WorkerPid = poolboy:checkout(locate_pool(Driver)),
+    Driver#persi_driver{transaction=WorkerPid}.
+release_connection(Driver=#persi_driver{}) ->
+    poolboy:checkin(locate_pool(Driver), Driver#persi_driver.transaction),
+    Driver#persi_driver{transaction=undefined}.
+
 
 
 %%====================================================================
@@ -229,28 +240,45 @@ do_table_info(TableName, Args, Pool) ->
        has_props=HasProps}.
 
 
-squery(Pool, Sql) ->
+squery(#persi_driver{transaction=undefined}=Driver, Sql) ->
     poolboy:transaction(
-      Pool,
+      locate_pool(Driver),
       fun(Worker) ->
               case gen_server:call(Worker, {squery, Sql}) of
                   {ok, _, _} -> ok;
                   {error, _} = E -> E
               end
-      end).
+      end);
 
-equery(Pool, Stmt, Params) ->
-    poolboy:transaction(Pool, fun(Worker) ->
-        gen_server:call(Worker, {equery, Stmt, Params})
-    end).
+squery(#persi_driver{transaction=Worker}, Sql) ->
+    case gen_server:call(Worker, {squery, Sql}) of
+        {ok, _, _} -> ok;
+        {error, _} = E -> E
+    end.
+
+
+%% Query without transaction
+equery(#persi_driver{transaction=undefined}=Driver, Stmt, Params) ->
+    equery(locate_pool(Driver), Stmt, Params);
+equery(Pool, Stmt, Params) when is_pid(Pool) ->
+    poolboy:transaction(
+      Pool,
+      fun(Worker) ->
+              gen_server:call(Worker, {equery, Stmt, Params})
+      end);
+%% Query inside a transaction
+equery(#persi_driver{transaction=Worker}, Stmt, Params) ->
+    gen_server:call(Worker, {equery, Stmt, Params}).
+
 
 locate_pool(#persi_driver{pid=Pid}) ->
     gproc:get_value({p, l, persi_pgsql_pool}, Pid).
 
-
 -spec map_columntype(binary(), non_neg_integer()) -> #persi_column{}.
 map_columntype(<<"integer">>, _) ->
     #persi_column{type=int};
+map_columntype(<<"bytea">>, _) ->
+    #persi_column{type=blob};
 map_columntype(<<"character varying">>, L) ->
     #persi_column{type=varchar, length=L};
 map_columntype(X, _) ->

@@ -41,7 +41,10 @@
 
 -callback map_dialect(atom() | {atom(), term()}) ->
     term().
-   
+
+-callback acquire_connection(#persi_driver{}) -> #persi_driver{}.
+-callback release_connection(#persi_driver{}) -> #persi_driver{}.
+
 -export([start_driver/3, reg/1]).
 
 -spec start_driver(persi:connection(), module(), persi:connection_opts()) -> {ok, pid()}.

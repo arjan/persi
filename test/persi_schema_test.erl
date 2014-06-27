@@ -112,12 +112,18 @@ column_types_test() ->
                 #persi_column{name=g, type=boolean, default=false},
                 
                 #persi_column{name=h, type=int},
-                #persi_column{name=i, type=int, default=12345}
+                #persi_column{name=i, type=int, default=12345},
+
+                #persi_column{name=j, type=blob}
+                
                ]
           },
     persi:create_table(T),
 
     {ok, T1} = persi:table_info(all_columns),
+
+    %io:format(user, "~p~n", [T1]),
+
     %% test that the output schema is identical to the input, so it is parsed correctly
     T1 = T,
 
