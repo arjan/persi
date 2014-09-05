@@ -42,21 +42,24 @@
 
 -define(param(N), Mod:map_dialect({sql_parameter, N})).
 
--spec info(persi:connection()) -> persi:schema_info().
-info(Connection) ->
-    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+-spec info(persi:connection() | #persi_driver{}) -> persi:schema_info().
+info(Connection) when is_atom(Connection) ->
+    info(persi_connection:lookup_driver(Connection));
+info(Driver = #persi_driver{module=Mod}) ->
     Mod:schema_info(Driver).
 
--spec table_info(persi:table(), persi:connection()) -> {ok, persi:table_info()} | {error, enotfound}.
-table_info(TableName, Connection) ->
-    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+-spec table_info(persi:table(), persi:connection() | #persi_driver{}) -> {ok, persi:table_info()} | {error, enotfound}.
+table_info(TableName, Connection) when is_atom(Connection) ->
+    table_info(TableName, persi_connection:lookup_driver(Connection));
+table_info(TableName, Driver = #persi_driver{module=Mod}) ->
     Mod:table_info(TableName, Driver).
 
--spec create_table(persi:table_info(), persi:connection()) -> ok | {error, eexist}.
-create_table(TableDef, Connection) ->
-    case table_info(TableDef#persi_table.name, Connection) of
+-spec create_table(persi:table_info(), persi:connection() | #persi_driver{}) -> ok | {error, eexist}.
+create_table(TableDef, Connection) when is_atom(Connection) ->
+    create_table(TableDef, persi_connection:lookup_driver(Connection));
+create_table(TableDef, Driver = #persi_driver{module=Mod}) ->
+    case table_info(TableDef#persi_table.name, Driver) of
         {error, enotfound} ->
-            Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
             SQL = create_table_sql(TableDef, Mod),
             ok = Mod:exec(SQL, Driver),
             ok = Mod:flush_metadata(Driver);
@@ -64,22 +67,24 @@ create_table(TableDef, Connection) ->
             {error, eexist}
     end.
 
--spec drop_table(persi:table(), persi:connection()) -> ok | {error, enotfound}.
-drop_table(TableName, Connection) when is_atom(TableName) ->
-    case table_info(TableName, Connection) of
+-spec drop_table(persi:table(), persi:connection() | #persi_driver{}) -> ok | {error, enotfound}.
+drop_table(TableName, Connection) when is_atom(TableName), is_atom(Connection) ->
+    drop_table(TableName, persi_connection:lookup_driver(Connection));
+drop_table(TableName, Driver = #persi_driver{module=Mod}) ->
+    case table_info(TableName, Driver) of
         {ok, #persi_table{}} ->
-            Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
             ok = Mod:exec([<<"DROP TABLE ">>, atom_to_list(TableName)], Driver),
             ok = Mod:flush_metadata(Driver);
         {error, enotfound} ->
             {error, enotfound}
     end.
 
--spec add_column(persi:table(), persi:column_info(), persi:connection()) -> ok | {error, enotfound}.
-add_column(TableName, ColumnDef, Connection) ->
-    case table_info(TableName, Connection) of
+-spec add_column(persi:table(), persi:column_info(), persi:connection() | #persi_driver{}) -> ok | {error, enotfound}.
+add_column(TableName, ColumnDef, Connection) when is_atom(Connection) ->
+    add_column(TableName, ColumnDef, persi_connection:lookup_driver(Connection));
+add_column(TableName, ColumnDef, Driver = #persi_driver{module=Mod}) ->
+    case table_info(TableName, Driver) of
         {ok, #persi_table{has_props=HasProps}} ->
-            Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
             true = Mod:map_dialect({check_support, add_column}),
             ok = Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" ADD COLUMN ">>,
                            create_column_sql(ColumnDef, Mod)], Driver),
@@ -94,11 +99,12 @@ add_column(TableName, ColumnDef, Connection) ->
             {error, enotfound}
     end.
 
--spec drop_column(persi:table(), atom(), persi:connection()) -> ok | {error, enotfound}.
-drop_column(TableName, ColumnName, Connection) ->
-    case table_info(TableName, Connection) of
+-spec drop_column(persi:table(), atom(), persi:connection() | #persi_driver{}) -> ok | {error, enotfound}.
+drop_column(TableName, ColumnName, Connection) when is_atom(Connection) ->
+    drop_column(TableName, ColumnName, persi_connection:lookup_driver(Connection));
+drop_column(TableName, ColumnName, Driver = #persi_driver{module=Mod}) ->
+    case table_info(TableName, Driver) of
         {ok, #persi_table{has_props=HasProps}} ->
-            Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
             true = Mod:map_dialect({check_support, drop_column}),
             case HasProps of
                 true ->
@@ -113,9 +119,11 @@ drop_column(TableName, ColumnName, Connection) ->
             {error, enotfound}
     end.
 
--spec manage(module(), persi:connection()) -> persi:manage_result().
-manage(SchemaModule, Connection) ->
-    case table_info(schema_version, Connection) of
+-spec manage(module(), persi:connection() | #persi_driver{}) -> persi:manage_result().
+manage(SchemaModule, Connection) when is_atom(Connection) ->
+    manage(SchemaModule, persi_connection:lookup_driver(Connection));
+manage(SchemaModule, Driver = #persi_driver{module=Mod}) ->
+    case table_info(schema_version, Driver) of
         {error, enotfound} ->
             ok = create_table(
                    #persi_table{name=schema_version,
@@ -123,28 +131,27 @@ manage(SchemaModule, Connection) ->
                                          #persi_column{name=schema_module, type="varchar(255)", notnull=true},
                                          #persi_column{name=version, type=int, notnull=true, default=1}
                                         ],
-                                pk=[schema_module]}, Connection);
+                                pk=[schema_module]}, Driver);
         {ok, _} ->
             nop
     end,
     Version = SchemaModule:schema_version(),
-    #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
-    {ok, SchemaResult} = persi_query:q(["SELECT version FROM schema_version WHERE schema_module = ", ?param(1)], [SchemaModule], Connection),
+    {ok, SchemaResult} = persi_query:q(["SELECT version FROM schema_version WHERE schema_module = ", ?param(1)], [SchemaModule], Driver),
     case SchemaResult of
         {[], _, _} ->
             %% install
-            ok = SchemaModule:manage(install, Connection),
+            ok = SchemaModule:manage(install, Driver),
             %% insert version
             persi_query:q(["INSERT INTO schema_version (schema_module, version) VALUES (", ?param(1), ", ", ?param(2), ")"],
-                                 [SchemaModule, Version], Connection),
+                                 [SchemaModule, Version], Driver),
             install;
         {[[Version]], _, _} ->
             noop;
         {[[OlderVersion]], _, _} when OlderVersion < Version ->
             Upgrades = lists:seq(OlderVersion+1, Version),
-            [ok = SchemaModule:manage({upgrade, V}, Connection) || V <- Upgrades],
+            [ok = SchemaModule:manage({upgrade, V}, Driver) || V <- Upgrades],
             persi_query:q(["UPDATE schema_version SET version = ", ?param(1), " WHERE schema_module = ", ?param(2)],
-                                 [Version, SchemaModule], Connection),
+                                 [Version, SchemaModule], Driver),
             {upgrade, Version};
         {[[_]], _, _} ->
             throw({error, schema_downgrade})

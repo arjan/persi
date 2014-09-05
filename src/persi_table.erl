@@ -33,11 +33,13 @@
 -define(param(N), Mod:map_dialect({sql_parameter, N})).
 
 
--spec insert(persi:table(), persi:row(), persi:connection()) -> ok | persi:error().
-insert(TableName, Row0, Connection) when is_atom(TableName) ->
+-spec insert(persi:table(), persi:row(), persi:connection() | #persi_driver{}) -> ok | persi:error().
+insert(TableName, Row0, Connection) when is_atom(TableName), is_atom(Connection) ->
+    insert(TableName, Row0, persi_connection:lookup_driver(Connection));
+insert(TableName, Row0, Driver = #persi_driver{module=Mod}) ->
 
-    {ok, TableInfo} = persi_schema:table_info(TableName, Connection),
-    Row = opt_fold_props(TableInfo, Row0, undefined, Connection),
+    {ok, TableInfo} = persi_schema:table_info(TableName, Driver),
+    Row = opt_fold_props(TableInfo, Row0, undefined, Driver),
     
     {Cols, Args} = lists:foldr(
                      fun({K, V}, {C0, A0}) ->
@@ -46,7 +48,6 @@ insert(TableName, Row0, Connection) when is_atom(TableName) ->
                      {[], []},
                      Row),
     
-    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
     Sql = [<<"INSERT INTO ">>, atom_to_list(TableName),
            " (",
            persi_util:iolist_join(Cols, $,),
@@ -62,12 +63,13 @@ insert(TableName, Row0, Connection) when is_atom(TableName) ->
     end.
 
 
--spec update(persi:table(), persi:selection(), persi:row(), persi:connection()) -> {ok, non_neg_integer()} | persi:error().
-update(TableName, Selection, Row0, Connection) when is_atom(TableName) ->
-    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+-spec update(persi:table(), persi:selection(), persi:row(), persi:connection() | #persi_driver{}) -> {ok, non_neg_integer()} | persi:error().
+update(TableName, Selection, Row0, Connection) when is_atom(TableName), is_atom(Connection) ->
+    update(TableName, Selection, Row0, persi_connection:lookup_driver(Connection));
+update(TableName, Selection, Row0, Driver = #persi_driver{module=Mod}) ->
 
-    {ok, TableInfo} = persi_schema:table_info(TableName, Connection),
-    Row = opt_fold_props(TableInfo, Row0, Selection, Connection),
+    {ok, TableInfo} = persi_schema:table_info(TableName, Driver),
+    Row = opt_fold_props(TableInfo, Row0, Selection, Driver),
 
     {Ks,Vs} = lists:unzip(Row),
     Ksn = lists:zip(lists:seq(1, length(Ks)), Ks),
@@ -86,21 +88,24 @@ update(TableName, Selection, Row0, Connection) when is_atom(TableName) ->
             E
     end.
 
--spec upsert(persi:table(), persi:selection(), persi:row(), persi:connection()) -> {ok, non_neg_integer()} | persi:error().
-upsert(TableName, Selection, Row, Connection) when is_atom(TableName) ->
-    case update(TableName, Selection, Row, Connection) of
+-spec upsert(persi:table(), persi:selection(), persi:row(), persi:connection() | #persi_driver{}) -> {ok, non_neg_integer()} | persi:error().
+upsert(TableName, Selection, Row, Connection) when is_atom(TableName), is_atom(Connection) ->
+    upsert(TableName, Selection, Row, persi_connection:lookup_driver(Connection));
+upsert(TableName, Selection, Row, Driver = #persi_driver{}) ->
+    case update(TableName, Selection, Row, Driver) of
         {ok, _} = R ->
             R;
         {error, enotfound} ->
-            ok = insert(TableName, rowterm(Selection) ++ Row, Connection),
+            ok = insert(TableName, rowterm(Selection) ++ Row, Driver),
             {ok, insert};
         {error, _} = E ->
             E
     end.
 
--spec delete(persi:table(), persi:selection(), persi:connection()) -> {ok, non_neg_integer()} | persi:error().
-delete(TableName, Selection, Connection) when is_atom(TableName) ->
-    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+-spec delete(persi:table(), persi:selection(), persi:connection() | #persi_driver{}) -> {ok, non_neg_integer()} | persi:error().
+delete(TableName, Selection, Connection) when is_atom(TableName), is_atom(Connection) ->
+    delete(TableName, Selection, persi_connection:lookup_driver(Connection));
+delete(TableName, Selection, Driver = #persi_driver{module=Mod}) ->
 
     {Where, Args} = selection_where(Selection, Mod),
     Sql = [<<"DELETE FROM ">>, atom_to_list(TableName), " WHERE ", Where],
@@ -113,9 +118,10 @@ delete(TableName, Selection, Connection) when is_atom(TableName) ->
             E
     end.
 
--spec select(persi:table(), persi:selection(), persi:connection()) -> {ok, persi:row()} | persi:error().
-select(TableName, Selection, Connection) when is_atom(TableName) ->
-    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
+-spec select(persi:table(), persi:selection(), persi:connection() | #persi_driver{}) -> {ok, persi:row()} | persi:error().
+select(TableName, Selection, Connection) when is_atom(TableName), is_atom(Connection) ->
+    select(TableName, Selection, persi_connection:lookup_driver(Connection));
+select(TableName, Selection, Driver = #persi_driver{module=Mod}) ->
 
     {Where, Args} = selection_where(Selection, Mod),
     Sql = [<<"SELECT * FROM ">>, atom_to_list(TableName), " WHERE ", Where, " LIMIT 1"],
@@ -124,7 +130,7 @@ select(TableName, Selection, Connection) when is_atom(TableName) ->
         {ok, {[], _, _}} ->
             {error, enotfound};
         {ok, {[Values], Columns, _}} ->
-            {ok, TableInfo} = persi_schema:table_info(TableName, Connection),
+            {ok, TableInfo} = persi_schema:table_info(TableName, Driver),
             {ok, values_to_row(Values, Columns, TableInfo)};
         {error, _} = E ->
             E
@@ -158,7 +164,7 @@ selection_where(KVs, Mod, StartN) when is_list(KVs) ->
                                    
 opt_fold_props(#persi_table{has_props=false}, Row, _, _) ->
     Row;
-opt_fold_props(#persi_table{has_props=true, columns=Columns, name=TableName}, Row, PK, Connection) ->
+opt_fold_props(#persi_table{has_props=true, columns=Columns, name=TableName}, Row, PK, Driver = #persi_driver{module=Mod}) ->
     ColNames = [C#persi_column.name || C <- Columns],
     %% split row
     {ColData, Props0} =
@@ -169,7 +175,6 @@ opt_fold_props(#persi_table{has_props=true, columns=Columns, name=TableName}, Ro
                     Props0;
                 _ ->
                     %% merge props on update
-                    Driver = #persi_driver{module=Mod} = persi_connection:lookup_driver(Connection),
                     {Where, WhereArgs} = selection_where(PK, Mod),
                     Sql = [<<"SELECT ">>, atom_to_list(?persi_props_column_name), <<" FROM ">>, atom_to_list(TableName), " WHERE ", Where],
 
