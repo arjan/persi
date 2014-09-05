@@ -1,5 +1,4 @@
 REBAR := ./rebar
-REBAR_URL := https://github.com/downloads/basho/rebar/rebar
 DBDRIVER ?= sqlite
 
 .PHONY: compile test
@@ -15,9 +14,3 @@ test: $(REBAR)
 
 clean: $(REBAR)
 	$(REBAR) clean
-
-./rebar:
-	erl -noshell -s inets start -s ssl start \
-        -eval '{ok, saved_to_file} = httpc:request(get, {"$(REBAR_URL)", []}, [], [{stream, "./rebar"}])' \
-        -s inets stop -s init stop
-	chmod +x ./rebar
