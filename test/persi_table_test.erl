@@ -88,9 +88,28 @@ upsert_test() ->
 
     {ok, insert} = persi:upsert(demotable, [{id, 123}], []),
     {ok, 1} = persi:upsert(demotable, [{id, 123}], []),
+    {ok, 1} = persi:upsert(demotable, [{id, 123}], []),
     
     teardown().
 
+upsert2_test() ->
+    setup(),
+
+    persi:create_table(
+      #persi_table{
+         name=user_seen,
+         columns=
+             [
+              #persi_column{name=user_id, type=varchar, length=255, notnull=true},
+              #persi_column{name=article_id, type=uuid, length=255, notnull=true}
+             ],
+         pk=[user_id,article_id]}),
+    
+    {ok, insert} = persi:upsert(user_seen, [{user_id, "a"}, {article_id, "b"}], []),
+    {ok, 1} = persi:upsert(user_seen, [{user_id, "a"}, {article_id, "b"}], []),
+
+    
+    teardown().
 
 unknown_table_test() ->
     setup(),
