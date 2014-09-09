@@ -55,6 +55,8 @@ full_test() ->
     {ok, Row1} = persi:select(demotable, 123),
     123 = proplists:get_value(id, Row1),
     <<"Bar">> = proplists:get_value(name, Row1),
+
+    {error, nodata} = persi:update(demotable, 123, []),
     
     {ok, 1} = persi:delete(demotable, 123),
     {error, enotfound} = persi:select(demotable, 123),
@@ -84,6 +86,9 @@ upsert_test() ->
     
     {ok, 1} = persi:delete(demotable, 111),
 
+    {ok, insert} = persi:upsert(demotable, [{id, 123}], []),
+    {ok, 1} = persi:upsert(demotable, [{id, 123}], []),
+    
     teardown().
 
 

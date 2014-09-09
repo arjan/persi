@@ -71,33 +71,47 @@ update(TableName, Selection, Row0, Driver = #persi_driver{module=Mod}) ->
     {ok, TableInfo} = persi_schema:table_info(TableName, Driver),
     Row = opt_fold_props(TableInfo, Row0, Selection, Driver),
 
-    {Ks,Vs} = lists:unzip(Row),
-    Ksn = lists:zip(lists:seq(1, length(Ks)), Ks),
-    Sets = persi_util:iolist_join(
-             [[atom_to_list(K), " = ", ?param(N)] || {N, K} <- Ksn], $,),
-    
-    {Where, WhereArgs} = selection_where(Selection, Mod, length(Vs)+1),
-    Sql = [<<"UPDATE ">>, atom_to_list(TableName), " SET ", Sets, " WHERE ", Where],
+    case Row of
+        [] ->
+            {error, nodata};
+        _ ->
+            {Ks,Vs} = lists:unzip(Row),
+            Ksn = lists:zip(lists:seq(1, length(Ks)), Ks),
+            Sets = persi_util:iolist_join(
+                     [[atom_to_list(K), " = ", ?param(N)] || {N, K} <- Ksn], $,),
 
-    case Mod:q(Sql, Vs ++ WhereArgs, Driver) of
-        {ok, {[[0]], _, _}} ->
-            {error, enotfound};
-        {ok, {[[Nr]], _, _}} ->
-            {ok, Nr};
-        {error, _} = E ->
-            E
+            {Where, WhereArgs} = selection_where(Selection, Mod, length(Vs)+1),
+            Sql = [<<"UPDATE ">>, atom_to_list(TableName), " SET ", Sets, " WHERE ", Where],
+
+            case Mod:q(Sql, Vs ++ WhereArgs, Driver) of
+                {ok, {[[0]], _, _}} ->
+                    {error, enotfound};
+                {ok, {[[Nr]], _, _}} ->
+                    {ok, Nr};
+                {error, _} = E ->
+                    E
+            end
     end.
 
 -spec upsert(persi:table(), persi:selection(), persi:row(), persi:connection() | #persi_driver{}) -> {ok, non_neg_integer()} | persi:error().
 upsert(TableName, Selection, Row, Connection) when is_atom(TableName), is_atom(Connection) ->
     upsert(TableName, Selection, Row, persi_connection:lookup_driver(Connection));
 upsert(TableName, Selection, Row, Driver = #persi_driver{}) ->
-    case update(TableName, Selection, Row, Driver) of
-        {ok, _} = R ->
-            R;
+    case select(TableName, Selection, Driver) of
+        {ok, _} ->
+            case Row of
+                [] ->
+                    {ok, 1};
+                _ ->
+                    update(TableName, Selection, Row, Driver)
+            end;
         {error, enotfound} ->
-            ok = insert(TableName, rowterm(Selection) ++ Row, Driver),
-            {ok, insert};
+            case insert(TableName, rowterm(Selection) ++ Row, Driver) of
+                ok ->
+                    {ok, insert};
+                {error, _} = E ->
+                    E
+            end;
         {error, _} = E ->
             E
     end.
