@@ -101,7 +101,7 @@ upsert2_test() ->
          columns=
              [
               #persi_column{name=user_id, type=varchar, length=255, notnull=true},
-              #persi_column{name=article_id, type=uuid, length=255, notnull=true}
+              #persi_column{name=article_id, type=varchar, length=255, notnull=true}
              ],
          pk=[user_id,article_id]}),
     

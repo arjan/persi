@@ -167,13 +167,13 @@ selection_where([], _, _) ->
     throw({error, empty_selection});
 selection_where(KVs, Mod, StartN) when is_list(KVs) ->
     {Clauses, Args, _}
-        = lists:foldr(
+        = lists:foldl(
             fun({K, V}, {C0, A0, N}) ->
                     {[ [atom_to_list(K), " = ", ?param(N)] | C0], [V | A0], N+1}
             end,
             {[], [], StartN},
             KVs),
-    {persi_util:iolist_join(Clauses, " AND "), Args}.
+    {persi_util:iolist_join(lists:reverse(Clauses), " AND "), lists:reverse(Args)}.
 
                                    
 opt_fold_props(#persi_table{has_props=false}, Row, _, _) ->
