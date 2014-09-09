@@ -33,9 +33,9 @@ demotable() ->
                               #persi_column{name=id, type=int},
                               #persi_column{name=name, type="varchar(50)", default="app", notnull=true}
                              ],
-                        pk=[id]},
+                         pk=[id]},
     persi:create_table(Table),
-    
+
     ok.
 
 
@@ -146,18 +146,25 @@ transaction_dup_test() ->
     setup(),
     demotable(),
 
-    {'EXIT', {{badmatch, _}, _}} =
-        (catch persi:transaction(
-                 fun(C) ->
-                         ok = persi:insert(demotable, [{id, 1}, {name, "foo"}], C),
-                         ok = persi:insert(demotable, [{id, 1}, {name, "foo"}], C)
-                 end)
-        ),
+    case os:getenv("DBDRIVER") of
+        "mysql" ->
+            %% Transactions not (yet) supported on MySQL
+            skip;
 
-    persi:transaction(
-      fun(C) ->
-              ok = persi:insert(demotable, [{id, 1}, {name, "foo"}] ,C)
-      end),
-    
-    
+        _ ->
+            {'EXIT', {{badmatch, _}, _}} =
+                (catch persi:transaction(
+                         fun(C) ->
+                                 ok = persi:insert(demotable, [{id, 1}, {name, "foo"}], C),
+                                 ok = persi:insert(demotable, [{id, 1}, {name, "foo"}], C)
+                         end)
+                ),
+
+            persi:transaction(
+              fun(C) ->
+                      ok = persi:insert(demotable, [{id, 1}, {name, "foo"}] ,C)
+              end)
+
+    end,
+
     teardown().
