@@ -61,11 +61,16 @@ transaction(F, #persi_driver{transaction=undefined, module=Mod}=Driver) ->
         Mod:exec("COMMIT", Driver1),
         Result
     catch
-        throw:Reason ->
+        Type:Reason ->
             Mod:exec("ROLLBACK", Driver1),
-            case Reason of
-                rollback -> {error, rollback};
-                _ -> throw(Reason)
+            case Type of
+                throw ->
+                    case Reason of
+                        rollback -> {error, rollback};
+                        _ -> throw(Reason)
+                    end;
+                error ->
+                    error(Reason)
             end
     after
         Mod:release_connection(Driver1)

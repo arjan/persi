@@ -25,6 +25,20 @@
 
 -include("persi_eunit.hrl").
 
+
+demotable() ->
+    Table = #persi_table{name=demotable,
+                         columns=
+                             [
+                              #persi_column{name=id, type=int},
+                              #persi_column{name=name, type="varchar(50)", default="app", notnull=true}
+                             ],
+                        pk=[id]},
+    persi:create_table(Table),
+    
+    ok.
+
+
 transaction_ok_test() ->
     setup(),
 
@@ -125,4 +139,25 @@ nested_transaction_test() ->
                         ))
     end,
 
+    teardown().
+
+
+transaction_dup_test() ->
+    setup(),
+    demotable(),
+
+    {'EXIT', {{badmatch, _}, _}} =
+        (catch persi:transaction(
+                 fun(C) ->
+                         ok = persi:insert(demotable, [{id, 1}, {name, "foo"}], C),
+                         ok = persi:insert(demotable, [{id, 1}, {name, "foo"}], C)
+                 end)
+        ),
+
+    persi:transaction(
+      fun(C) ->
+              ok = persi:insert(demotable, [{id, 1}, {name, "foo"}] ,C)
+      end),
+    
+    
     teardown().
