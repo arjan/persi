@@ -208,7 +208,10 @@ values_to_row(Values, Columns, TableInfo) ->
         false ->
             Row;
         true ->
-            Props0 = binary_to_term(proplists:get_value(?persi_props_column_name, Row)),
+            Props0 = case proplists:get_value(?persi_props_column_name, Row) of
+                         null -> [];
+                         P -> binary_to_term(P)
+                     end,
             Props = case Props0 of {X} -> X; X -> X end, %% unwrap legacy
             proplists:delete(?persi_props_column_name, Row) ++ Props
     end.
