@@ -68,6 +68,7 @@ q(Sql, Args, #persi_driver{pid=Pid}) ->
 map_dialect({check_support, drop_column}) -> {error, drop_column_not_supported};
 map_dialect({check_support, _}) -> true;
 map_dialect({columntype, #persi_column{type=T}}) -> T;
+map_dialect({columnvalue, T, V}) -> map_columnvalue(T, V);
 map_dialect({sql_parameter, _N}) -> "?".
 
 acquire_connection(Driver=#persi_driver{}) ->
@@ -129,7 +130,7 @@ handle_call({q, Sql, Args}, _From, State) ->
                      case esqlite3:fetchall(Stmt) of
                          Ret when is_list(Ret) ->
                              {ok, NumRows} = esqlite3:changes(State#state.db),
-                             {ok, {[tuple_to_list(R) || R <- Ret], tuple_to_list(ColNames), NumRows}};
+                             {ok, {[lists:map(fun(V) -> map_value(q, V) end, tuple_to_list(R)) || R <- Ret], tuple_to_list(ColNames), NumRows}};
                          {error, _} = E ->
                              E
                      end;
@@ -224,5 +225,24 @@ map_value(<<"int">>, V) when is_binary(V) ->
     list_to_integer(binary_to_list(map_value(unknown, V)));
 map_value(_, <<"'", Rest/binary>>) ->
     hd(binary:split(Rest, <<"'">>));
+map_value(_, <<Y:4/binary, "-",
+                            M:2/binary, "-", 
+                            D:2/binary, " ", 
+                            Hh:2/binary, ":", 
+                            Mm:2/binary, ":", 
+                            Ss:2/binary>>) ->
+    {{erlang:binary_to_integer(Y),
+      erlang:binary_to_integer(M),
+      erlang:binary_to_integer(D)},
+     {erlang:binary_to_integer(Hh),
+      erlang:binary_to_integer(Mm),
+      erlang:binary_to_integer(Ss)}
+    };
+
 map_value(_T, X) ->
     X.
+
+map_columnvalue(datetime, {{Y,M,D},{Hh, Mm, Ss}}) ->
+    iolist_to_binary(io_lib:format("~4..0B-~2..0B-~2..0B ~2..0B:~2..0B:~2..0B", [Y, M, D, Hh, Mm, Ss]));
+map_columnvalue(T, V) ->
+    V.

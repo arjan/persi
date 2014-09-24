@@ -140,3 +140,22 @@ unknown_column_test() ->
     {error, _} = persi:upsert(demotable, 123, [{name, <<"Foo">>}, {meh, moeder}]),
     
     teardown().
+
+
+column_type_datetime_test() ->
+    setup(),
+    Table = #persi_table{name=demotable,
+                         columns=
+                             [
+                              #persi_column{name=name, type=datetime, notnull=true}
+                             ]
+                        },
+    persi:create_table(Table),
+    
+    Date = {{2014, 1, 1}, {0,0,0}},
+    ok = persi:insert(demotable, [{name, Date}]),
+
+    %% check that date is returned properly
+    {ok, {[[{{2014, 1, 1}, {0,0,_}}]], _, _}} = persi:q("SELECT * FROM demotable", []),
+    
+    ok.

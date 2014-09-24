@@ -40,10 +40,13 @@ insert(TableName, Row0, Driver = #persi_driver{module=Mod}) ->
 
     {ok, TableInfo} = persi_schema:table_info(TableName, Driver),
     Row = opt_fold_props(TableInfo, Row0, undefined, Driver),
+    Types = [{C#persi_column.name, C#persi_column.type} || C <- TableInfo#persi_table.columns],
     
     {Cols, Args} = lists:foldr(
                      fun({K, V}, {C0, A0}) ->
-                             {[atom_to_list(K)|C0], [V|A0]}
+                             Value = Mod:map_dialect({columnvalue, proplists:get_value(K, Types), V}),
+                             Col = atom_to_list(K),
+                             {[Col|C0], [Value|A0]}
                      end,
                      {[], []},
                      Row),

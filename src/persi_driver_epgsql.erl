@@ -78,6 +78,7 @@ map_dialect({check_support, _}) -> true;
 map_dialect({columntype, #persi_column{type=blob}}) -> <<"bytea">>;
 map_dialect({columntype, #persi_column{type=datetime}}) -> <<"timestamp">>;
 map_dialect({columntype, #persi_column{type=T}}) -> T;
+map_dialect({columnvalue, _, V}) -> V;
 map_dialect({sql_parameter, N}) -> [$$ , $0 + N].  %% $1, $2, etc
 
 

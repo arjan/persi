@@ -74,7 +74,7 @@ q(Sql, Args, #persi_driver{id=Id}) ->
             #ok_packet{affected_rows=Rows} ->
                 {ok, {[[Rows]], [], Rows}};
             #result_packet{rows=Rows, field_list=Fields} ->
-                {ok, {Rows, [binary_to_atom(F#field.name, utf8) || F <- Fields], 0}};
+                {ok, {[map_row_values(Row) || Row <- Rows], [binary_to_atom(F#field.name, utf8) || F <- Fields], 0}};
             #error_packet{msg=Msg, status=Status} ->
                 {error, {emysql, Status, Msg}}
         end
@@ -87,6 +87,7 @@ map_dialect({check_support, #persi_column{type=varchar, length=undefined}}) -> {
 map_dialect({check_support, transactions}) -> {error, transactions_not_supported};
 map_dialect({check_support, _}) -> true;
 map_dialect({columntype, #persi_column{type=T}}) -> T;
+map_dialect({columnvalue, _, V}) -> V;
 map_dialect({sql_parameter, _N}) -> "?".
 
 acquire_connection(#persi_driver{}) ->
@@ -229,3 +230,11 @@ map_default(<<"1">>, <<"tinyint(1)">>) -> true;
 map_default(<<"0">>, <<"tinyint(1)">>) -> false;
 map_default(V, _) -> V.
 
+
+map_row_values(Row) ->
+    [map_value(V) || V <- Row].
+
+map_value({datetime, DT}) ->
+    DT;
+map_value(V) ->
+    V.
