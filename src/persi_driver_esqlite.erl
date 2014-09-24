@@ -231,12 +231,12 @@ map_value(_, <<Y:4/binary, "-",
                             Hh:2/binary, ":", 
                             Mm:2/binary, ":", 
                             Ss:2/binary>>) ->
-    {{erlang:binary_to_integer(Y),
-      erlang:binary_to_integer(M),
-      erlang:binary_to_integer(D)},
-     {erlang:binary_to_integer(Hh),
-      erlang:binary_to_integer(Mm),
-      erlang:binary_to_integer(Ss)}
+    {{to_int(Y),
+      to_int(M),
+      to_int(D)},
+     {to_int(Hh),
+      to_int(Mm),
+      to_int(Ss)}
     };
 
 map_value(_T, X) ->
@@ -244,5 +244,8 @@ map_value(_T, X) ->
 
 map_columnvalue(datetime, {{Y,M,D},{Hh, Mm, Ss}}) ->
     iolist_to_binary(io_lib:format("~4..0B-~2..0B-~2..0B ~2..0B:~2..0B:~2..0B", [Y, M, D, Hh, Mm, Ss]));
-map_columnvalue(T, V) ->
+map_columnvalue(_T, V) ->
     V.
+
+to_int(B) ->
+    list_to_integer(binary_to_list(B)).
