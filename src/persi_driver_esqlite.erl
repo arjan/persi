@@ -84,7 +84,10 @@ release_connection(Driver=#persi_driver{}) ->
 init({Id, Args}) ->
     persi_driver:reg(?MODULE),
 
-    {dbfile, DbFile} = proplists:lookup(dbfile, Args),
+    DbFile = case proplists:lookup(dbfile, Args) of
+                 none -> throw({error, {missing_esqlite_parameter, dbfile}});
+                 {dbfile, D} -> D
+             end,
 
     %% Open the file
     {ok, Db} = esqlite3:open(DbFile),
