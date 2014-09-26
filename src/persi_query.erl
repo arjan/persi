@@ -25,6 +25,8 @@
    [
     q/2,
     q/3,
+    rows/3,
+    rows/4,
     transaction/1,
     transaction/2
    ]
@@ -46,6 +48,22 @@ q(Sql, Args, Connection) when is_atom(Connection) ->
     Driver = persi_connection:lookup_driver(Connection),
     q(Sql, Args, Driver).
 
+
+-spec rows(persi:table(), persi:sql(), persi:sql_args()) -> persi:q_result().
+rows(Table, Sql, Args) ->
+    %%io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
+    rows(Table, Sql, Args, ?PERSI_DEFAULT_CONNECTION).
+
+-spec rows(persi:table(), persi:sql(), persi:sql_args(), persi:connection() | #persi_driver{}) -> [persi:row()].
+rows(Table, Sql, Args, Connection) ->
+    {ok, Info} = persi_schema:table_info(Table, Connection),
+    case q(Sql, Args, Connection) of
+        {ok, {Rows, Columns, _}} ->
+            [persi_util:values_to_row(Row, Columns, Info) || Row <- Rows];
+        {error, _} = E ->
+            E
+    end.
+    
 
 -spec transaction(fun()) -> term().
 transaction(F) when is_function(F) ->

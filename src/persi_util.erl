@@ -24,7 +24,8 @@
    [
     iolist_join/2,
     map_sql_to_column/1,
-    map_column_to_sql/1
+    map_column_to_sql/1,
+    values_to_row/3
    ]).
 
 
@@ -57,3 +58,17 @@ varchar_split(Rest) ->
     [NumBin, _] = binary:split(Rest, <<")">>),
     #persi_column{type=varchar, length=list_to_integer(binary_to_list(NumBin))}.
     
+
+values_to_row(Values, Columns, TableInfo) ->
+    Row = lists:zip(Columns, Values),
+    case TableInfo#persi_table.has_props of
+        false ->
+            Row;
+        true ->
+            Props0 = case proplists:get_value(?persi_props_column_name, Row) of
+                         null -> [];
+                         P -> binary_to_term(P)
+                     end,
+            Props = case Props0 of {X} -> X; X -> X end, %% unwrap legacy
+            proplists:delete(?persi_props_column_name, Row) ++ Props
+    end.

@@ -59,6 +59,8 @@
     %% persi_query wrappers
     q/2,
     q/3,
+    rows/3,
+    rows/4,
     transaction/1,
     transaction/2
     
@@ -256,6 +258,16 @@ q(Sql, Args) ->
 -spec q(sql(), sql_args(), connection()) -> q_result().
 q(Sql, Args, Connection) ->
     persi_query:q(Sql, Args, Connection).
+
+
+
+-spec rows(table(), sql(), sql_args()) -> q_result().
+rows(Table, Sql, Args) ->
+    rows(Table, Sql, Args, ?PERSI_DEFAULT_CONNECTION).
+
+-spec rows(table(), sql(), sql_args(), connection()) -> q_result().
+rows(Table, Sql, Args, Connection) ->
+    persi_query:rows(Table, Sql, Args, Connection).
 
 
 -spec transaction(fun()) -> term().

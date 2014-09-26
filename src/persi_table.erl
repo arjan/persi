@@ -148,7 +148,7 @@ select(TableName, Selection, Driver = #persi_driver{module=Mod}) ->
             {error, enotfound};
         {ok, {[Values], Columns, _}} ->
             {ok, TableInfo} = persi_schema:table_info(TableName, Driver),
-            {ok, values_to_row(Values, Columns, TableInfo)};
+            {ok, persi_util:values_to_row(Values, Columns, TableInfo)};
         {error, _} = E ->
             E
     end.
@@ -205,20 +205,6 @@ opt_fold_props(#persi_table{has_props=true, columns=Columns, name=TableName}, Ro
     [{?persi_props_column_name, term_to_binary(Props)} | ColData].
 
             
-values_to_row(Values, Columns, TableInfo) ->
-    Row = lists:zip(Columns, Values),
-    case TableInfo#persi_table.has_props of
-        false ->
-            Row;
-        true ->
-            Props0 = case proplists:get_value(?persi_props_column_name, Row) of
-                         null -> [];
-                         P -> binary_to_term(P)
-                     end,
-            Props = case Props0 of {X} -> X; X -> X end, %% unwrap legacy
-            proplists:delete(?persi_props_column_name, Row) ++ Props
-    end.
-
 merge_props(New, {Old}) ->
     merge_props(New, Old); %% unwrap legacy
 merge_props(New, Old) ->
