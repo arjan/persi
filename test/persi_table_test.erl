@@ -157,5 +157,5 @@ column_type_datetime_test() ->
 
     %% check that date is returned properly
     {ok, {[[{{2014, 1, 1}, {0,0,_}}]], _, _}} = persi:q("SELECT * FROM demotable", []),
-    
-    ok.
+
+    teardown().
