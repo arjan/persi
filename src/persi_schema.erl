@@ -195,6 +195,8 @@ map_sql_default(T, _DriverModule) when is_integer(T) ->
     map_sql_default(integer_to_list(T), _DriverModule);
 map_sql_default(B, _DriverModule) when B =:= true; B =:= false ->
     ["DEFAULT ", atom_to_list(B)];
+map_sql_default(current_timestamp, _DriverModule) ->
+    ["DEFAULT CURRENT_TIMESTAMP"];
 map_sql_default(X, _DriverModule) when is_binary(X); is_list(X) ->
     ["DEFAULT '", X, "'"].
 
@@ -257,10 +259,10 @@ migrate_to_props(TableName, ColumnName, #persi_driver{module=Mod}=Driver) ->
     {ok, length(All)}.
 
 
-merge_column(A, B) ->
-    list_to_tuple(
-      lists:map(fun({undefined, X}) -> X;
-                   ({X, _}) -> X end,
-                lists:zip(tuple_to_list(A), tuple_to_list(B))
-               )).
+%% merge_column(A, B) ->
+%%     list_to_tuple(
+%%       lists:map(fun({undefined, X}) -> X;
+%%                    ({X, _}) -> X end,
+%%                 lists:zip(tuple_to_list(A), tuple_to_list(B))
+%%                )).
                          

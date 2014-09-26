@@ -32,16 +32,16 @@ demotable() ->
                               #persi_column{name=id, type=int},
                               #persi_column{name=name, type="varchar(50)", default="app", notnull=true}
                              ],
-                        pk=[id]},
+                         pk=[id]},
     persi:create_table(Table),
-    
+
     ok.
 
 
 full_test() ->
     setup(),
     demotable(),
-    
+
     {error, enotfound} = persi:select(demotable, 123),
     {error, enotfound} = persi:delete(demotable, 123),
 
@@ -57,7 +57,7 @@ full_test() ->
     <<"Bar">> = proplists:get_value(name, Row1),
 
     {error, nodata} = persi:update(demotable, 123, []),
-    
+
     {ok, 1} = persi:delete(demotable, 123),
     {error, enotfound} = persi:select(demotable, 123),
 
@@ -67,11 +67,11 @@ full_test() ->
 upsert_test() ->
     setup(),
     demotable(),
-    
+
     {ok, insert} = persi:upsert(demotable, 111, [{name, <<"Foo">>}]),
 
     {ok, insert} = persi:upsert(demotable, [{id, 33333}], [{name, <<"Another row">>}]),
-    
+
     {ok, _} = persi:select(demotable, 111),
 
     {ok, 1} = persi:upsert(demotable, 111, [{name, <<"Bar">>}]),
@@ -80,16 +80,16 @@ upsert_test() ->
     %% alternate selection mechanisms
     {ok, Row1} = persi:select(demotable, [{id, 111}]),
     {ok, Row1} = persi:select(demotable, [{name, <<"Bar">>}]),
-    
+
     111 = proplists:get_value(id, Row1),
     <<"Bar">> = proplists:get_value(name, Row1),
-    
+
     {ok, 1} = persi:delete(demotable, 111),
 
     {ok, insert} = persi:upsert(demotable, [{id, 123}], []),
     {ok, 1} = persi:upsert(demotable, [{id, 123}], []),
     {ok, 1} = persi:upsert(demotable, [{id, 123}], []),
-    
+
     teardown().
 
 upsert2_test() ->
@@ -104,24 +104,24 @@ upsert2_test() ->
               #persi_column{name=article_id, type=varchar, length=255, notnull=true}
              ],
          pk=[user_id,article_id]}),
-    
+
     {ok, insert} = persi:upsert(user_seen, [{user_id, "a"}, {article_id, "b"}], []),
     {ok, 1} = persi:upsert(user_seen, [{user_id, "a"}, {article_id, "b"}], []),
 
-    
+
     teardown().
 
 unknown_table_test() ->
     setup(),
-    
+
     {error, _} = persi:delete(unknowntable, 123),
-    
+
     teardown().
 
 empty_selection_test() ->
     setup(),
     demotable(),
-    
+
     case catch persi:select(demotable, []) of
         {error, empty_selection} -> ok
     end,
@@ -131,14 +131,14 @@ empty_selection_test() ->
 unknown_column_test() ->
     setup(),
     demotable(),
-    
+
     {error, enotfound} = persi:select(demotable, 123),
 
     {error, _} = persi:select(demotable, [{xxxid, 123}]),
     {error, _} = persi:insert(demotable, [{id, 123}, {name, <<"Foo">>}, {meh, moeder}]),
     {error, _} = persi:update(demotable, 123, [{name, <<"Foo">>}, {meh, moeder}]),
     {error, _} = persi:upsert(demotable, 123, [{name, <<"Foo">>}, {meh, moeder}]),
-    
+
     teardown().
 
 
@@ -151,7 +151,7 @@ column_type_datetime_test() ->
                              ]
                         },
     persi:create_table(Table),
-    
+
     Date = {{2014, 1, 1}, {0,0,0}},
     ok = persi:insert(demotable, [{name, Date}]),
 
@@ -159,3 +159,31 @@ column_type_datetime_test() ->
     {ok, {[[{{2014, 1, 1}, {0,0,_}}]], _, _}} = persi:q("SELECT * FROM demotable", []),
 
     teardown().
+
+
+default_current_timestamp_test() ->
+
+    case os:getenv("DBDRIVER") of
+        "mysql" ->
+            %% current_timestamp on datetime columns not supported on MySQL < 5.6.0
+            skip;
+
+        _ ->
+
+            setup(),
+            Table = #persi_table{name=demotable,
+                                 columns=
+                                     [
+                                      #persi_column{name=id, type=varchar, length=255, notnull=true},
+                                      #persi_column{name=created, type=datetime, notnull=true, default=current_timestamp}
+                                     ]
+                                },
+            persi:create_table(Table),
+
+            ok = persi:insert(demotable, [{id, "Hello"}]),
+
+            %% check that a current timestamp is inserted
+            {ok, {[[{{_,_,_}, {_,_,_}}]], _, _}} = persi:q("SELECT created FROM demotable", []),
+
+            teardown()
+    end.
