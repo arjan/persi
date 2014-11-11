@@ -62,4 +62,6 @@ rows_test() ->
      [{id, 2}, {name, <<"Jan">>}]
     ] = Rows,
 
+    Rows = persi:rows(demotable, "SELECT * FROM demotable"),
+    
     teardown().

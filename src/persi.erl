@@ -62,6 +62,7 @@
     q/1,
     q/2,
     q/3,
+    rows/2,
     rows/3,
     rows/4,
     transaction/1,
@@ -274,6 +275,10 @@ q(Sql, Args, Connection) ->
     persi_query:q(Sql, Args, Connection).
 
 
+
+-spec rows(table(), sql()) -> q_result().
+rows(Table, Sql) ->
+    rows(Table, Sql, [], ?PERSI_DEFAULT_CONNECTION).
 
 -spec rows(table(), sql(), sql_args()) -> q_result().
 rows(Table, Sql, Args) ->
