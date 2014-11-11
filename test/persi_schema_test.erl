@@ -128,3 +128,13 @@ column_types_test() ->
     T1 = T,
 
     teardown().
+
+flush_test() ->
+    setup(),
+
+    ok = persi:create_table(#persi_table{name=foo, columns=[#persi_column{name=a,type=varchar,length=12}]}),
+    {ok, _} = persi:q("drop table foo", []),
+    persi:flush_metadata(),
+    ok = persi:create_table(#persi_table{name=foo, columns=[#persi_column{name=a,type=varchar,length=12}]}),
+    
+    teardown().

@@ -55,8 +55,11 @@
     drop_column/3,
     manage_schema/1,
     manage_schema/2,
-
+    flush_metadata/0,
+    flush_metadata/1,
+    
     %% persi_query wrappers
+    q/1,
     q/2,
     q/3,
     rows/3,
@@ -248,11 +251,22 @@ manage_schema(Module, Conn) ->
     persi_schema:manage(Module, Conn).
 
 
+-spec flush_metadata() -> ok.
+flush_metadata() ->
+    flush_metadata(?PERSI_DEFAULT_CONNECTION).
+
+-spec flush_metadata(connection()) -> ok.
+flush_metadata(Conn) ->
+    persi_schema:flush_metadata(Conn).
+
+
 %% persi_query wrappers
 
+-spec q(sql()) -> q_result().
+q(Sql) ->
+    q(Sql, [], ?PERSI_DEFAULT_CONNECTION).
 -spec q(sql(), sql_args()) -> q_result().
 q(Sql, Args) ->
-    %%io:format(user, ">> ~p~n", [iolist_to_binary(Sql)]),
     q(Sql, Args, ?PERSI_DEFAULT_CONNECTION).
 
 -spec q(sql(), sql_args(), connection()) -> q_result().

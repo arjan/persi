@@ -34,7 +34,8 @@
     drop_table/2,
     add_column/3,
     drop_column/3,
-    manage/2
+    manage/2,
+    flush_metadata/1
    ]).
 
 -include_lib("persi/include/persi.hrl").
@@ -156,6 +157,12 @@ manage(SchemaModule, Driver = #persi_driver{module=Mod}) ->
         {[[_]], _, _} ->
             throw({error, schema_downgrade})
     end.
+
+-spec flush_metadata(persi:connection() | #persi_driver{}) -> ok.
+flush_metadata(Connection) when is_atom(Connection) ->
+    flush_metadata(persi_connection:lookup_driver(Connection));
+flush_metadata(Driver = #persi_driver{module=Mod}) ->
+    ok = Mod:flush_metadata(Driver).
 
 
 create_table_sql(#persi_table{name=Name, columns=Columns, pk=PK, fks=FKs}, DriverModule) ->

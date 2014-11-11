@@ -39,7 +39,15 @@ demotable() ->
     persi:create_table(Table),
     ok.
 
+q_test() ->
+    setup(),
+    demotable(),
 
+    ok = persi:insert(demotable, [{id, 1}, {name, "Piet"}]),
+    {ok, _Raw} = persi:q("SELECT * FROM demotable"),
+    
+    teardown().
+    
 rows_test() ->
     setup(),
     demotable(),
