@@ -79,15 +79,15 @@ update(TableName, Selection, Row0, Driver = #persi_driver{module=Mod}) ->
         [] ->
             {error, nodata};
         _ ->
-            {Ks,Vs} = lists:unzip(Row),
-            Vs1 = lists:foldl(
+            {Ks,_} = lists:unzip(Row),
+            Vs1 = lists:foldr(
                     fun({K, V}, Acc) ->
                             Value = Mod:map_dialect({columnvalue, proplists:get_value(K, Types), V}),
                             [Value|Acc]
                     end,
                     [],
                     Row),
-            
+
             Ksn = lists:zip(lists:seq(1, length(Ks)), Ks),
             Sets = persi_util:iolist_join(
                      [[atom_to_list(K), " = ", ?param(N)] || {N, K} <- Ksn], $,),
