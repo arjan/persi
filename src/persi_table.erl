@@ -73,20 +73,29 @@ update(TableName, Selection, Row0, Driver = #persi_driver{module=Mod}) ->
 
     {ok, TableInfo} = persi_schema:table_info(TableName, Driver),
     Row = opt_fold_props(TableInfo, Row0, Selection, Driver),
+    Types = [{C#persi_column.name, C#persi_column.type} || C <- TableInfo#persi_table.columns],
 
     case Row of
         [] ->
             {error, nodata};
         _ ->
             {Ks,Vs} = lists:unzip(Row),
+            Vs1 = lists:foldl(
+                    fun({K, V}, Acc) ->
+                            Value = Mod:map_dialect({columnvalue, proplists:get_value(K, Types), V}),
+                            [Value|Acc]
+                    end,
+                    [],
+                    Row),
+            
             Ksn = lists:zip(lists:seq(1, length(Ks)), Ks),
             Sets = persi_util:iolist_join(
                      [[atom_to_list(K), " = ", ?param(N)] || {N, K} <- Ksn], $,),
 
-            {Where, WhereArgs} = selection_where(Selection, Mod, length(Vs)+1),
+            {Where, WhereArgs} = selection_where(Selection, Mod, length(Vs1)+1),
             Sql = [<<"UPDATE ">>, atom_to_list(TableName), " SET ", Sets, " WHERE ", Where],
 
-            case Mod:q(Sql, Vs ++ WhereArgs, Driver) of
+            case Mod:q(Sql, Vs1 ++ WhereArgs, Driver) of
                 {ok, {[[0]], _, _}} ->
                     {error, enotfound};
                 {ok, {[[Nr]], _, _}} ->

@@ -147,16 +147,22 @@ column_type_datetime_test() ->
     Table = #persi_table{name=demotable,
                          columns=
                              [
-                              #persi_column{name=name, type=datetime, notnull=true}
+                              #persi_column{name=id, type=int},
+                              #persi_column{name=modified, type=datetime, notnull=true}
                              ]
                         },
     persi:create_table(Table),
 
     Date = {{2014, 1, 1}, {0,0,0}},
-    ok = persi:insert(demotable, [{name, Date}]),
-
+    ok = persi:insert(demotable, [{id, 1}, {modified, Date}]),
+    
     %% check that date is returned properly
-    {ok, {[[{{2014, 1, 1}, {0,0,_}}]], _, _}} = persi:q("SELECT * FROM demotable", []),
+    {ok, {[[{{2014, 1, 1}, {0,0,_}}]], _, _}} = persi:q("SELECT modified FROM demotable", []),
+   
+    {ok, 1} = persi:update(demotable, 1, [{modified, {{2014, 1, 2}, {0,0,0}} }]),
+    
+    %% check that date is returned properly
+    {ok, {[[{{2014, 1, 2}, {0,0,_}}]], _, _}} = persi:q("SELECT modified FROM demotable", []),
 
     teardown().
 
