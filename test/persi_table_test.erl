@@ -161,11 +161,10 @@ column_type_datetime_test() ->
     {ok, {[[{{2014, 1, 1}, {0,0,_}}]], _, _}} = persi:q("SELECT modified FROM demotable", []),
    
     {ok, 1} = persi:update(demotable, 1, [{modified, {{2014, 1, 2}, {0,0,0}} }]),
-
-    {ok, 1} = persi:update(demotable, 1, [{modified, {{2014, 1, 2}, {0,0,0}} }]),
-    
-    %% check that date is returned properly
     {ok, {[[{{2014, 1, 2}, {0,0,_}}]], _, _}} = persi:q("SELECT modified FROM demotable", []),
+
+    {ok, 1} = persi:update(demotable, 1, [{modified, {{2014, 1, 3}, {0,0,0}} }]),
+    {ok, {[[{{2014, 1, 3}, {0,0,_}}]], _, _}} = persi:q("SELECT modified FROM demotable", []),
 
     teardown().
 
