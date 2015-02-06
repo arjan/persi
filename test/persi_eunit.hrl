@@ -1,8 +1,10 @@
-
-setup() ->
+start_persi() ->
     application:start(gproc),
     application:start(persi),
-
+    ok.
+    
+setup() ->
+    ok = start_persi(),
     {Mod, Opts} = case os:getenv("DBDRIVER") of
                      "mysql" ->
                          crypto:start(),

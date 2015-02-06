@@ -22,13 +22,13 @@
 
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("persi/include/persi.hrl").
+-include_lib("persi_eunit.hrl").
 
 -define(DBFILE, ":memory:").
 
 dup_default_connection_test() ->
-    application:start(gproc),
-    application:start(persi),
-
+    ok = start_persi(),
+           
     ok = persi:add_connection(persi_driver_esqlite, [{dbfile, ?DBFILE}]),
     {error, eexist} = persi:add_connection(persi_driver_esqlite, []),
 
@@ -36,8 +36,7 @@ dup_default_connection_test() ->
     ok.
 
 dup_named_connection_test() ->
-    application:start(gproc),
-    application:start(persi),
+    ok = start_persi(),
 
     ok = persi:add_connection(sqlite1, persi_driver_esqlite, [{dbfile, ?DBFILE}]),
     ok = persi:add_connection(sqlite2, persi_driver_esqlite, [{dbfile, "/tmp/test1.db"}]),
@@ -50,8 +49,7 @@ dup_named_connection_test() ->
 
 
 unknown_connection_test() ->
-    application:start(gproc),
-    application:start(persi),
+    ok = start_persi(),
 
     {error, enotfound} = persi:remove_connection(sdfdfds),
 
@@ -66,8 +64,7 @@ unknown_connection_test() ->
 
 
 add_remove_connection_test() ->
-    application:start(gproc),
-    application:start(persi),
+    ok = start_persi(),
 
     ok = persi:add_connection(asdf, persi_driver_esqlite, [{dbfile, ?DBFILE}]),
     {error, eexist} = persi:add_connection(asdf, persi_driver_esqlite, [{dbfile, ?DBFILE}]),
