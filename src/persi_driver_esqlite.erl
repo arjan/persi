@@ -24,7 +24,7 @@
 -include_lib("persi/include/persi.hrl").
 -include("persi_int.hrl").
 
--record(state, {id, db, metadata=undefined}).
+-record(state, {id, db, metadata=undefined, log_queries=false}).
 
 %% gen_server exports
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -100,7 +100,8 @@ init({Id, Args}) ->
     %% Assert a lock on the db file, no 2 processes can open the same db file at once
 %%%Fixme? gproc:reg_shared({p,l,{esqlite_dbfile, DbFile}}),
 
-    {ok, #state{id=Id, db=Db, metadata=do_schema_info(Db)}}.
+    LogQueries = application:get_env(persi, log_queries, false),
+    {ok, #state{id=Id, db=Db, metadata=do_schema_info(Db), log_queries=LogQueries}}.
 
 
 handle_call(remove_connection, _From, State) ->
@@ -120,10 +121,14 @@ handle_call({table_info, Table}, _From, State=#state{metadata=Metadata}) ->
     {reply, Reply, State};
 
 handle_call({exec, Sql}, _From, State) ->
-    {reply, esqlite3:exec(iolist_to_binary(Sql), State#state.db), State};
+    SqlBin = iolist_to_binary(Sql),
+    opt_log_queries(Sql, [], State),
+    {reply, esqlite3:exec(SqlBin, State#state.db), State};
 
 handle_call({q, Sql, Args}, _From, State) ->
-    Result = case esqlite3:prepare(iolist_to_binary(Sql), State#state.db) of
+    SqlBin = iolist_to_binary(Sql),
+    opt_log_queries(Sql, Args, State),
+    Result = case esqlite3:prepare(SqlBin, State#state.db) of
                  {ok, Stmt} ->
                      ColNames = esqlite3:column_names(Stmt),
                      ok = esqlite3:bind(Stmt, Args),
@@ -249,3 +254,10 @@ map_columnvalue(_T, V) ->
 
 to_int(B) ->
     list_to_integer(binary_to_list(B)).
+
+opt_log_queries(Sql, Args, #state{log_queries={M, F}}=S) ->
+    M:F("[persi ~p] Query: ~s, ~p", [S#state.id, Sql, Args]);
+opt_log_queries(Sql, Args, #state{log_queries=F}=S) when is_function(F) ->
+    F("[persi ~p] Query: ~s, ~p", [S#state.id, Sql, Args]);
+opt_log_queries(_, _, _) ->
+    ok.

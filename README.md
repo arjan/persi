@@ -105,3 +105,15 @@ Driver Limitations
 
 * `drop column` is not supported
 
+
+Debugging
+---------
+
+Set the `log_queries` environment variable to enable query logging through the given logger function `Module:Function/2`:
+
+    application:set_env(persi, log_queries, {io, format}).
+
+Alternatively, you can set the `log_queries` variable to a callback function:
+
+    application:set_env(persi, log_queries, fun(Query, Args) -> ... end).
+
