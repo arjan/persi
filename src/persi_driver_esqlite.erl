@@ -258,6 +258,6 @@ to_int(B) ->
 opt_log_queries(Sql, Args, #state{log_queries={M, F}}=S) ->
     M:F("[persi ~p] Query: ~s, ~p", [S#state.id, Sql, Args]);
 opt_log_queries(Sql, Args, #state{log_queries=F}=S) when is_function(F) ->
-    F("[persi ~p] Query: ~s, ~p", [S#state.id, Sql, Args]);
+    F("[persi ~p] Query: ~s, ~p~n", [S#state.id, Sql, Args]);
 opt_log_queries(_, _, _) ->
     ok.
