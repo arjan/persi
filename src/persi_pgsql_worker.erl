@@ -25,7 +25,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
 
--record(state, {conn}).
+-record(state, {conn, log_queries=false}).
 
 start_link(Args) ->
     gen_server:start_link(?MODULE, Args, []).
@@ -39,11 +39,19 @@ init(Args) ->
     {ok, Conn} = pgsql:connect(Hostname, Username, Password, [
         {database, Database}
     ]),
-    {ok, #state{conn=Conn}}.
+
+    LogQueries = case application:get_env(persi, log_queries) of
+                     {ok, Value} -> Value;
+                     undefined -> false
+                 end,
+
+    {ok, #state{conn=Conn, log_queries=LogQueries}}.
 
 handle_call({squery, Sql}, _From, #state{conn=Conn}=State) ->
+    opt_log_queries(Sql, [], State),
     {reply, pgsql:squery(Conn, Sql), State};
 handle_call({equery, Stmt, Params}, _From, #state{conn=Conn}=State) ->
+    opt_log_queries(Stmt, Params, State),
     {reply, pgsql:equery(Conn, Stmt, Params), State};
 handle_call(_Request, _From, State) ->
     {reply, ok, State}.
@@ -60,3 +68,10 @@ terminate(_Reason, #state{conn=Conn}) ->
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
+
+opt_log_queries(Sql, Args, #state{log_queries={M, F}}) ->
+    M:F("[pgsql ~p] Query: ~s, ~p", [self(), Sql, Args]);
+opt_log_queries(Sql, Args, #state{log_queries=F}) when is_function(F) ->
+    F("[pgsql ~p] Query: ~s, ~p~n", [self(), Sql, Args]);
+opt_log_queries(_, _, _) ->
+    ok.
