@@ -101,7 +101,10 @@ init({Id, Args}) ->
     %% Assert a lock on the db file, no 2 processes can open the same db file at once
 %%%Fixme? gproc:reg_shared({p,l,{esqlite_dbfile, DbFile}}),
 
-    LogQueries = application:get_env(persi, log_queries, false),
+    LogQueries = case application:get_env(persi, log_queries) of
+                     {ok, Value} -> Value;
+                     undefined -> false
+                 end,
     {ok, #state{id=Id, db=Db, metadata=do_schema_info(Db), log_queries=LogQueries}}.
 
 
