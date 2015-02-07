@@ -156,10 +156,10 @@ column_type_datetime_test() ->
 
     Date = {{2014, 1, 1}, {0,0,0}},
     ok = persi:insert(demotable, [{id, 1}, {modified, Date}]),
-    
+
     %% check that date is returned properly
     {ok, {[[{{2014, 1, 1}, {0,0,_}}]], _, _}} = persi:q("SELECT modified FROM demotable", []),
-   
+
     {ok, 1} = persi:update(demotable, 1, [{modified, {{2014, 1, 2}, {0,0,0}} }]),
     {ok, {[[{{2014, 1, 2}, {0,0,_}}]], _, _}} = persi:q("SELECT modified FROM demotable", []),
 
@@ -195,3 +195,24 @@ default_current_timestamp_test() ->
 
             teardown()
     end.
+
+
+escaping_test() ->
+    setup(),
+
+    case os:getenv("DBDRIVER") of
+        "mysql" ->
+            %% weirdness in emysql
+            skip;
+
+        _ ->
+            Table = #persi_table{name=xtable,
+                                 columns=
+                                     [
+                                      #persi_column{name=xorder, type=varchar, length=255, notnull=true},
+                                      #persi_column{name=xdesc, type=datetime, notnull=true, default=current_timestamp}
+                                     ]
+                                },
+            ok = persi:create_table(Table)
+            end,
+    teardown().

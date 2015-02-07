@@ -44,14 +44,14 @@ insert(TableName, Row0, Driver = #persi_driver{module=Mod}) ->
     
     {Cols, Args} = lists:foldr(
                      fun({K, V}, {C0, A0}) ->
+                             Col = Mod:map_dialect({quote_literal, atom_to_list(K)}),
                              Value = Mod:map_dialect({columnvalue, proplists:get_value(K, Types), V}),
-                             Col = atom_to_list(K),
                              {[Col|C0], [Value|A0]}
                      end,
                      {[], []},
                      Row),
     
-    Sql = [<<"INSERT INTO ">>, atom_to_list(TableName),
+    Sql = [<<"INSERT INTO ">>, Mod:map_dialect({quote_literal, atom_to_list(TableName)}),
            " (",
            persi_util:iolist_join(Cols, $,),
            ") VALUES (",
@@ -90,10 +90,14 @@ update(TableName, Selection, Row0, Driver = #persi_driver{module=Mod}) ->
 
             Ksn = lists:zip(lists:seq(1, length(Ks)), Ks),
             Sets = persi_util:iolist_join(
-                     [[atom_to_list(K), " = ", ?param(N)] || {N, K} <- Ksn], $,),
+                     [begin
+                          C = Mod:map_dialect({quote_literal, atom_to_list(K)}),
+                          [C, " = ", ?param(N)]
+                      end || {N, K} <- Ksn], $,),
 
             {Where, WhereArgs} = selection_where(Selection, Mod, length(Vs1)+1),
-            Sql = [<<"UPDATE ">>, atom_to_list(TableName), " SET ", Sets, " WHERE ", Where],
+            T = Mod:map_dialect({quote_literal, atom_to_list(TableName)}),
+            Sql = [<<"UPDATE ">>, T, " SET ", Sets, " WHERE ", Where],
 
             case Mod:q(Sql, Vs1 ++ WhereArgs, Driver) of
                 {ok, {[[0]], _, _}} ->
@@ -134,7 +138,8 @@ delete(TableName, Selection, Connection) when is_atom(TableName), is_atom(Connec
 delete(TableName, Selection, Driver = #persi_driver{module=Mod}) ->
 
     {Where, Args} = selection_where(Selection, Mod),
-    Sql = [<<"DELETE FROM ">>, atom_to_list(TableName), " WHERE ", Where],
+    T = Mod:map_dialect({quote_literal, atom_to_list(TableName)}),
+    Sql = [<<"DELETE FROM ">>, T, " WHERE ", Where],
     case Mod:q(Sql, Args, Driver) of
         {ok, {_, _, 0}} ->
             {error, enotfound};
@@ -150,7 +155,8 @@ select(TableName, Selection, Connection) when is_atom(TableName), is_atom(Connec
 select(TableName, Selection, Driver = #persi_driver{module=Mod}) ->
 
     {Where, Args} = selection_where(Selection, Mod),
-    Sql = [<<"SELECT * FROM ">>, atom_to_list(TableName), " WHERE ", Where, " LIMIT 1"],
+    T = Mod:map_dialect({quote_literal, atom_to_list(TableName)}),
+    Sql = [<<"SELECT * FROM ">>, T, " WHERE ", Where, " LIMIT 1"],
 
     case Mod:q(Sql, Args, Driver) of
         {ok, {[], _, _}} ->
@@ -181,7 +187,10 @@ selection_where(KVs, Mod, StartN) when is_list(KVs) ->
     {Clauses, Args, _}
         = lists:foldl(
             fun({K, V}, {C0, A0, N}) ->
-                    {[ [atom_to_list(K), " = ", ?param(N)] | C0], [V | A0], N+1}
+                    {[ begin
+                           C = Mod:map_dialect({quote_literal, atom_to_list(K)}),
+                           [C, " = ", ?param(N)]
+                       end| C0], [V | A0], N+1}
             end,
             {[], [], StartN},
             KVs),
@@ -202,7 +211,9 @@ opt_fold_props(#persi_table{has_props=true, columns=Columns, name=TableName}, Ro
                 _ ->
                     %% merge props on update
                     {Where, WhereArgs} = selection_where(PK, Mod),
-                    Sql = [<<"SELECT ">>, atom_to_list(?persi_props_column_name), <<" FROM ">>, atom_to_list(TableName), " WHERE ", Where],
+                    T = Mod:map_dialect({quote_literal, atom_to_list(TableName)}),
+                    P = Mod:map_dialect({quote_literal, atom_to_list(?persi_props_column_name)}),
+                    Sql = [<<"SELECT ">>, P, <<" FROM ">>, T, " WHERE ", Where],
 
                     case Mod:q(Sql, WhereArgs, Driver) of
                         {ok, {[], _, _}} ->

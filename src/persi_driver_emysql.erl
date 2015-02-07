@@ -88,7 +88,8 @@ map_dialect({check_support, transactions}) -> {error, transactions_not_supported
 map_dialect({check_support, _}) -> true;
 map_dialect({columntype, #persi_column{type=T}}) -> T;
 map_dialect({columnvalue, _, V}) -> V;
-map_dialect({sql_parameter, _N}) -> "?".
+map_dialect({sql_parameter, _N}) -> "?";
+map_dialect({quote_literal, L}) -> [$`, L, $`].
 
 acquire_connection(#persi_driver{}) ->
     throw(transactions_not_supported).

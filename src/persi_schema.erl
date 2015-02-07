@@ -74,7 +74,8 @@ drop_table(TableName, Connection) when is_atom(TableName), is_atom(Connection) -
 drop_table(TableName, Driver = #persi_driver{module=Mod}) ->
     case table_info(TableName, Driver) of
         {ok, #persi_table{}} ->
-            ok = Mod:exec([<<"DROP TABLE ">>, atom_to_list(TableName)], Driver),
+            T = Mod:map_dialect({quote_literal, atom_to_list(TableName)}),
+            ok = Mod:exec([<<"DROP TABLE ">>, T], Driver),
             ok = Mod:flush_metadata(Driver);
         {error, enotfound} ->
             {error, enotfound}
@@ -87,7 +88,8 @@ add_column(TableName, ColumnDef, Driver = #persi_driver{module=Mod}) ->
     case table_info(TableName, Driver) of
         {ok, #persi_table{has_props=HasProps}} ->
             true = Mod:map_dialect({check_support, add_column}),
-            ok = Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" ADD COLUMN ">>,
+            T = Mod:map_dialect({quote_literal, atom_to_list(TableName)}),
+            ok = Mod:exec([<<"ALTER TABLE ">>, T, <<" ADD COLUMN ">>,
                            create_column_sql(ColumnDef, Mod)], Driver),
             case HasProps of
                 true ->
@@ -113,7 +115,8 @@ drop_column(TableName, ColumnName, Driver = #persi_driver{module=Mod}) ->
                 false ->
                     nop
             end,
-            ok = Mod:exec([<<"ALTER TABLE ">>, atom_to_list(TableName), <<" DROP COLUMN ">>,
+            T = Mod:map_dialect({quote_literal, atom_to_list(TableName)}),
+            ok = Mod:exec([<<"ALTER TABLE ">>, T, <<" DROP COLUMN ">>,
                            atom_to_list(ColumnName)], Driver),
             ok = Mod:flush_metadata(Driver);
         {error, enotfound} ->
@@ -165,8 +168,9 @@ flush_metadata(Driver = #persi_driver{module=Mod}) ->
     ok = Mod:flush_metadata(Driver).
 
 
-create_table_sql(#persi_table{name=Name, columns=Columns, pk=PK, fks=FKs}, DriverModule) ->
-    ["CREATE TABLE ", atom_to_list(Name), " (",
+create_table_sql(#persi_table{name=TableName, columns=Columns, pk=PK, fks=FKs}, DriverModule) ->
+    T = DriverModule:map_dialect({quote_literal, atom_to_list(TableName)}),
+    ["CREATE TABLE ", T, " (",
      persi_util:iolist_join(
        [create_column_sql(C, DriverModule) || C <- Columns]
        ++ primary_key_sql(PK, DriverModule)
@@ -177,7 +181,8 @@ create_table_sql(#persi_table{name=Name, columns=Columns, pk=PK, fks=FKs}, Drive
 
 create_column_sql(Column=#persi_column{name=Name, default=Default, notnull=Notnull}, DriverModule) ->
     true = DriverModule:map_dialect({check_support, Column}),
-    [atom_to_list(Name),
+    C = DriverModule:map_dialect({quote_literal, atom_to_list(Name)}),
+    [C,
      " ", map_sql_type(Column, DriverModule),
      " ", map_sql_default(Default, DriverModule),
      " ", map_sql_notnull(Notnull, DriverModule)
@@ -218,8 +223,10 @@ primary_key_sql([], _DriverModule) ->
 primary_key_sql(Cols, _DriverModule) ->
     [["PRIMARY KEY (", persi_util:iolist_join(lists:map(fun atom_to_list/1, Cols), $,), ")"]].
 
-foreign_key_sql(#persi_fk{table=Table, from=From, to=To}, _DriverModule) ->
-    ["FOREIGN KEY (", atom_to_list(From) ,") REFERENCES ", atom_to_list(Table), "(", atom_to_list(To), ")"].
+foreign_key_sql(#persi_fk{table=TableName, from=From, to=To}, DriverModule) ->
+    T = DriverModule:map_dialect({quote_literal, atom_to_list(TableName)}),
+    C = DriverModule:map_dialect({quote_literal, atom_to_list(To)}),
+    ["FOREIGN KEY (", atom_to_list(From) ,") REFERENCES ", T, "(", C, ")"].
 
 
 
@@ -227,15 +234,17 @@ foreign_key_sql(#persi_fk{table=Table, from=From, to=To}, _DriverModule) ->
 %% FIXME wrap this in a single transaction instead of making separate calls to the driver
 migrate_from_props(TableName, ColumnName, #persi_driver{module=Mod}=Driver) ->
     Mod:exec("BEGIN", Driver),
-    {ok, {All, _, _}} = Mod:q(["SELECT id, props FROM ", atom_to_list(TableName)], [], Driver),
+    T = Mod:map_dialect({quote_literal, atom_to_list(TableName)}),
+    {ok, {All, _, _}} = Mod:q(["SELECT id, props FROM ", T], [], Driver),
     [begin
          Props = binary_to_term(PropsBin),
          case proplists:lookup(ColumnName, Props) of
              none ->
                  skip;
              {_, V} -> 
-                 Mod:q(["UPDATE ", atom_to_list(TableName), " SET ",
-                               atom_to_list(ColumnName), " = ", ?param(1),
+                 C = Mod:map_dialect({quote_literal, atom_to_list(ColumnName)}),
+                 Mod:q(["UPDATE ", T, " SET ",
+                               C, " = ", ?param(1),
                                ", props = ", ?param(2), " WHERE id = ", ?param(3)],
                               [V, term_to_binary(proplists:delete(ColumnName, Props)), Id],
                               Driver)
@@ -247,7 +256,9 @@ migrate_from_props(TableName, ColumnName, #persi_driver{module=Mod}=Driver) ->
 
 migrate_to_props(TableName, ColumnName, #persi_driver{module=Mod}=Driver) ->
     Mod:exec("BEGIN", Driver),
-    {ok, {All, _, _}} = Mod:q(["SELECT id, ", atom_to_list(ColumnName), ", props FROM ", atom_to_list(TableName)], [], Driver),
+    T = Mod:map_dialect({quote_literal, atom_to_list(TableName)}),
+    C = Mod:map_dialect({quote_literal, atom_to_list(ColumnName)}),
+    {ok, {All, _, _}} = Mod:q(["SELECT id, ", C, ", props FROM ", T], [], Driver),
     [begin
          case Value of
              undefined ->
@@ -255,7 +266,7 @@ migrate_to_props(TableName, ColumnName, #persi_driver{module=Mod}=Driver) ->
              _ -> 
                  Props = binary_to_term(PropsBin),
                  NewProps = [{ColumnName, Value} | proplists:delete(ColumnName, Props)],
-                 Mod:q(["UPDATE ", atom_to_list(TableName),
+                 Mod:q(["UPDATE ", T,
                                " SET props = ", ?param(1), " WHERE id = ", ?param(2)],
                               [term_to_binary(NewProps), Id],
                               Driver)
