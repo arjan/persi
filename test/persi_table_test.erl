@@ -216,3 +216,17 @@ escaping_test() ->
             ok = persi:create_table(Table)
             end,
     teardown().
+
+manycolumns_test() ->
+    setup(),
+    Columns = [a,b,c,d,e,f,g,h,i,j,k,l,m,n],
+    Table = #persi_table{name=atable,
+                         columns=
+                             [#persi_column{name=C, type=varchar, length=10} || C <- Columns]
+                        },
+    ok = persi:create_table(Table),
+
+    Values = lists:zip(Columns, [<<"foo">> || _ <- Columns]),
+    ok = persi:insert(atable, Values),
+    ok.
+
