@@ -228,5 +228,31 @@ manycolumns_test() ->
 
     Values = lists:zip(Columns, [<<"foo">> || _ <- Columns]),
     ok = persi:insert(atable, Values),
-    ok.
 
+    teardown().
+
+
+column_type_float_test() ->
+    setup(),
+    Table = #persi_table{name=demotable,
+                         columns=
+                             [
+                              #persi_column{name=id, type=int},
+                              #persi_column{name=value, type=float}
+                             ]
+                        },
+    persi:create_table(Table),
+
+    FloatValue = 3.1415,
+
+    ok = persi:insert(demotable, [{id, 1}, {value, FloatValue}]),
+
+    %% check that date is returned properly
+    {ok, {[[FloatValue]], _, _}} = persi:q("SELECT value FROM demotable", []),
+
+    FloatValue2 = FloatValue * FloatValue, % rangom
+    
+    {ok, 1} = persi:update(demotable, 1, [{value, FloatValue2 }]),
+    {ok, {[[FloatValue2]], _, _}} = persi:q("SELECT value FROM demotable", []),
+
+    teardown().
