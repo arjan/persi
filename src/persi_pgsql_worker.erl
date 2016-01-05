@@ -40,6 +40,9 @@ init(Args) ->
         {database, Database}
     ]),
 
+    InitialQueries = proplists:get_value(initial_queries, Args, []),
+    [pgsql:squery(Conn, Query) || Query <- InitialQueries],
+
     LogQueries = case application:get_env(persi, log_queries) of
                      {ok, Value} -> Value;
                      undefined -> false
